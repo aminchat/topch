@@ -1,0 +1,2324 @@
+@-webkit-keyframes slideInLeft {
+    from {
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0);
+        visibility: visible
+    }
+
+    to {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0);
+        visibility: visible
+    }
+
+    to {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@-webkit-keyframes slideInRight {
+    from {
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0);
+        visibility: visible
+    }
+
+    to {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0);
+        visibility: visible
+    }
+
+    to {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@-webkit-keyframes slideInDown {
+    from {
+        -webkit-transform: translate3d(0, -10px, 0);
+        transform: translate3d(0, -10px, 0);
+        visibility: visible
+    }
+
+    to {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        -webkit-transform: translate3d(0, -10px, 0);
+        transform: translate3d(0, -10px, 0);
+        visibility: visible
+    }
+
+    to {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@-webkit-keyframes fadeInRight {
+    from {
+        opacity: 0;
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
+    }
+
+    to {
+        opacity: 1;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0)
+    }
+
+    to {
+        opacity: 1;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@-webkit-keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
+    }
+
+    to {
+        opacity: 1;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        -webkit-transform: translate3d(-100%, 0, 0);
+        transform: translate3d(-100%, 0, 0)
+    }
+
+    to {
+        opacity: 1;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0)
+    }
+}
+
+.sidebar-icon {
+    margin-left: unset !important;
+    margin-right: auto !important
+}
+
+.sidebar-subList {
+    margin-left: unset !important;
+    margin-right: 30px !important
+}
+
+.sidebar-menulist-item-arr {
+    margin-left: unset !important;
+    margin-right: auto !important
+}
+
+.arrow-icon {
+    margin-left: unset !important;
+    margin-right: auto;
+    transform: rotate(180deg) !important
+}
+
+.sidebar-icon-div {
+    margin-right: auto !important;
+    margin-left: unset !important
+}
+
+.sidebar-list-header span {
+    margin-left: unset !important;
+    margin-right: 12px;
+    font-size: 14px
+}
+
+@media screen and (max-width: 992px) {
+    .sidebar-list-header span {
+        font-size: 14px
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .sidebar-list-header span {
+        font-size: 14px
+    }
+}
+
+.sidebar-list-back {
+    background-color: #1C1C2A
+}
+
+.sidebar-list-back .arrow-icon {
+    transform: rotate(90deg) !important
+}
+
+.sub-menu-l2 {
+    padding: 12px 48px 12px 20px !important
+}
+
+.sidebar-title-anim {
+    animation: slideInDown !important;
+    animation-duration: 300ms !important
+}
+
+.sidebar-header-txt {
+    margin-left: unset !important;
+    margin-right: 13px
+}
+
+.sub-arrow-icon {
+    margin-right: auto !important;
+    margin-left: -4px !important
+}
+
+@media screen and (min-width: 992px) {
+    .mat-drawer-content {
+        margin-left: 0 !important;
+    }
+
+    .pagecontant-close {
+        margin-left: 0 !important;
+    }
+}
+
+.navbar-items-SideDev {
+    margin-right: auto
+}
+
+.navbarFlagImg {
+    margin-left: 5px
+}
+
+.navbarItemsDiv {
+    margin-left: 5px
+}
+
+.navbar-language .mat-mdc-button {
+    padding: 0px 40px 0px 3px
+}
+
+@media screen and (max-width: 576px) {
+    .navbar-language .mat-mdc-button {
+        padding: 0px 10px 0px 3px
+    }
+}
+
+.navbar-language .main-btn .arrow-icon {
+    padding: 2px 13px 0 0
+}
+
+.navbar-language .main-btn .language-span {
+    padding: 0px 5px 0px 1px !important
+}
+
+.menu-content {
+    margin-left: unset !important;
+    margin-right: 10px
+}
+
+.menu-content span {
+    padding-left: unset;
+    padding-right: 12px
+}
+
+.language-ddl {
+    direction: rtl
+}
+
+.navbar-right {
+    margin-left: unset !important;
+    margin-right: auto !important;
+    left: 0;
+    right: unset
+}
+
+.navbar-popup img {
+    margin-right: unset !important;
+    margin-left: 15px
+}
+
+.navbar-popup .head button {
+    margin-left: unset !important;
+    margin-right: 6px
+}
+
+.navbar-popup .head>span {
+    margin-right: unset !important;
+    margin-left: 6px
+}
+
+.navbar-popup .icon-arrow-right {
+    transform: rotate(180deg)
+}
+
+.pop-parent.notification-parent {
+    padding-right: 0 !important;
+    padding-left: 0px
+}
+
+.friend {
+    right: unset !important;
+    left: 0px
+}
+
+.friend::after {
+    right: unset !important;
+    left: 8%
+}
+
+.message {
+    right: unset !important;
+    left: 0px
+}
+
+.message::after {
+    right: unset !important;
+    left: 8%
+}
+
+.bell {
+    right: unset !important;
+    left: 0px
+}
+
+.bell::after {
+    right: unset !important;
+    left: 8%
+}
+
+.navbar-user {
+    padding: 8px 25px 8px 0px !important
+}
+
+.navbar-user .txt {
+    padding: 0 3px 0 13px !important
+}
+
+@media screen and (min-width: 768px) {
+    .navbar-user .txt i {
+        padding-right: unset;
+        padding-left: 13px
+    }
+}
+
+.navbar-user {
+    border-width: 0px 1px 0px 0px !important
+}
+
+.navbar-user button {
+    border-left: unset !important;
+    border-right: 5px solid #eeeeee !important
+}
+
+.user-pro {
+    right: unset !important;
+    left: 22px
+}
+
+.user-pro::after {
+    right: 90% !important
+}
+
+.user-pro head span {
+    margin-right: 10px !important
+}
+
+.popup-tab .mat-badge-content {
+    margin-right: unset !important;
+    margin-left: -7px
+}
+
+.pop-tab-div {
+    margin-right: unset !important;
+    margin-left: 22px
+}
+
+.navbar-menu-icon {
+    margin-left: unset !important;
+    margin-right: auto !important
+}
+
+.navbar-popUp-row .icon-right-open-mini {
+    transform: rotate(180deg)
+}
+
+.navbar-icons .icon .mat-badge-content {
+    line-height: 17px !important
+}
+
+@media screen and (max-width: 768px) {
+    .navbar-icons .friend {
+        right: unset !important;
+        left: -140px
+    }
+
+    .navbar-icons .friend::after {
+        left: 50%;
+        right: unset !important
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .navbar-icons .navbar-user {
+        padding: 12px 2px 12px 10px
+    }
+
+    .navbar-icons .navbar-user .txt {
+        border: none !important;
+        padding: 0px !important;
+        min-width: 0 !important;
+        padding: 0 3px !important
+    }
+
+    .navbar-icons .navbar-user .txt span {
+        display: none !important
+    }
+
+    .navbar-icons .navbar-language .mat-mdc-button {
+        padding: 0px 10px 0px 3px !important
+    }
+
+    .navbar-icons .navbar-language .main-btn .arrow-icon {
+        padding: 2px 5px 0 0
+    }
+
+    .navbar-icons .friend {
+        right: unset !important;
+        left: -145px
+    }
+
+    .navbar-icons .friend::after {
+        left: 51%;
+        right: unset !important
+    }
+
+    .navbar-icons .message {
+        right: unset !important;
+        left: -100px
+    }
+
+    .navbar-icons .message::after {
+        left: 37%;
+        right: unset !important
+    }
+
+    .navbar-icons .bell {
+        right: unset !important;
+        left: -50px
+    }
+
+    .navbar-icons .bell::after {
+        left: 22%;
+        right: unset !important
+    }
+}
+
+.navbar-popup-not-margin {
+    margin-right: 10px !important;
+    margin-left: unset !important
+}
+
+@media screen and (max-width: 400px) {
+    .navbar-user {
+        padding: 12px 2px 12px 10px !important
+    }
+
+    .navbar-popup {
+        left: 0 !important
+    }
+
+    .friend::after {
+        right: unset !important;
+        left: 190px !important
+    }
+
+    .message::after {
+        left: 145px !important;
+        right: unset !important
+    }
+
+    .bell::after {
+        left: 100px !important;
+        right: unset !important
+    }
+
+    .user-pro {
+        left: 0 !important
+    }
+
+    .navbar-language button {
+        min-width: 0 !important;
+        padding: 0px 10px 0px 2px !important
+    }
+
+    .navbar-language .mat-mdc-button {
+        padding: 0px 10px 0px 3px !important
+    }
+}
+
+.mat-form-field-placeholder {
+    color: red !important
+}
+
+.mat-focused .mat-form-field-placeholder {
+    color: red !important
+}
+
+.login-content .btn-div button {
+    margin-left: unset !important;
+    margin-right: auto
+}
+
+.side-slider .bottom-bar {
+    position: absolute;
+    bottom: 0;
+    right: unset;
+    left: 0;
+    padding: 0px 0 15px 15px
+}
+
+.side-slider .bottom-bar a {
+    padding: 3px 2px
+}
+
+.terms .header .btn {
+    margin-left: unset !important;
+    margin-right: auto
+}
+
+.terms .header .btn i {
+    margin-right: unset !important;
+    margin-left: 15px
+}
+
+.terms .header .btn i::before {
+    transform: rotate(180deg)
+}
+
+.terms .header .btn button {
+    padding: 0 30px 0 50px
+}
+
+.terms .header .content .txt {
+    margin-left: unset !important;
+    margin-right: 15px;
+    opacity: 0.78
+}
+
+.terms .header .content .more {
+    margin-left: unset !important;
+    margin-right: 15px
+}
+
+.register-content .btn-div button {
+    margin-left: unset !important;
+    margin-right: auto
+}
+
+.auth .link-underline:after,
+.auth .link-underline:visited:after {
+    left: unset;
+    right: 0;
+    width: 0%
+}
+
+.mat-form-field-outline-start {
+    width: 7px !important
+}
+
+.auth-navbar .right {
+    margin-left: unset !important;
+    margin-right: auto
+}
+
+.auth-content .form-container .btns-div .back-btn button .icon-arrow-left {
+    padding-right: unset;
+    padding-left: 10px
+}
+
+.auth-content .form-container .btns-div .back-btn button .icon-arrow-left::before {
+    transform: rotate(180deg)
+}
+
+.wallets.edit {
+    direction: ltr
+}
+
+.wallets.edit .head>div {
+    display: flex;
+    align-items: center
+}
+
+.wallets.edit .content ::after {
+    background-position-x: right !important
+}
+
+.tabs-body .ellipsis-box .email-text {
+    order: 2;
+    text-align: left
+}
+
+.ticket-detail .icon-arrow-left {
+    transform: rotate(180deg)
+}
+
+.ticket-detail .icon-arrow-left::before {
+    transform: rotate(180deg)
+}
+
+@media screen and (max-width: 992px) {
+    .ticket-detail .messages {
+        padding-right: 0
+    }
+}
+
+.ticket-detail .messages .icon-reply {
+    transform: scaleX(-1);
+    -moz-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    -ms-transform: scaleX(-1)
+}
+
+.ticket-detail .messages .ticket {
+    padding-left: 0.5px
+}
+
+.ticket-detail .messages .ticket .user {
+    border-left: 1px solid
+}
+
+@media screen and (max-width: 576px) {
+    .ticket-detail .messages .ticket .user {
+        border-left: unset
+    }
+}
+
+.ticket-detail .messages .ticket .user>div {
+    padding: 12px 12px 0 0px
+}
+
+@media screen and (max-width: 576px) {
+    .ticket-detail .messages .ticket .user .name {
+        padding: 0px 7px 0px 12px
+    }
+}
+
+.ticket-detail .messages .ticket .data .footer .dl {
+    margin: 3px 0px 3px 5px
+}
+
+@media screen and (max-width: 992px) {
+    .ticket-detail .messages .ticket .data .footer .setare {
+        margin-left: unset !important;
+        margin-right: auto
+    }
+}
+
+.ticket-detail .messages .subject i::before {
+    transform: scaleX(-1);
+    -moz-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    -ms-transform: scaleX(-1)
+}
+
+@media screen and (max-width: 992px) {
+    .ticket-detail .messages .subject i::before {
+        transform: scaleX(-1);
+        -moz-transform: scaleX(-1);
+        -webkit-transform: scaleX(-1);
+        -ms-transform: scaleX(-1)
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .ticket-detail .messages .replay .body .file-upload .select-file {
+        margin-left: unset
+    }
+}
+
+.ticket-detail .messages .replay .body .file-upload .select-file .icon-delete {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.ticket-detail .messages .replay .body .file-upload .select-file .icon-upload {
+    padding-right: unset;
+    padding-left: 10px
+}
+
+.ticket-detail .messages .replay .body .file-upload .select-file .icon-trash {
+    padding: 0;
+    margin-left: unset;
+    margin-right: auto
+}
+
+.ticket-detail .messages .replay .body .file-upload .select-file .button {
+    margin-right: auto;
+    margin-left: unset
+}
+
+.ticket-detail .messages .replay .footer .button-gorup {
+    float: left;
+    display: flex;
+    flex-direction: row-reverse
+}
+
+.ticket-detail .detail-container {
+    padding-left: unset !important;
+    padding-right: 1%
+}
+
+@media screen and (max-width: 992px) {
+    .ticket-detail .detail-container {
+        padding-right: unset
+    }
+}
+
+.ticket-detail .detail-container .ticket-information .icon-reply::before {
+    transform: scaleX(-1);
+    -moz-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    -ms-transform: scaleX(-1)
+}
+
+.ticket-detail .detail-container .ticket-information .buttons>:first-child {
+    margin-right: unset;
+    margin-left: 2%
+}
+
+@media screen and (max-width: 992px) {
+    .ticket-detail .detail-container .ticket-information .buttons>:first-child {
+        margin-right: unset;
+        margin-left: 1.5%
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .ticket-detail .detail-container .ticket-information .buttons>:first-child {
+        margin-right: unset;
+        margin-left: 2.5%
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .table-ticket-list .cdk-column-more {
+        padding-right: 14px !important;
+        padding-left: 24px !important;
+        width: 65px
+    }
+}
+
+.table-ticket-list .cdk-column-ticketId {
+    padding-right: 24px !important;
+    padding-left: 34px !important
+}
+
+@media screen and (max-width: 768px) {
+    .table-ticket-list .cdk-column-ticketId {
+        padding-right: 14px !important;
+        padding-left: 24px !important
+    }
+}
+
+.filter-container .filter .buttons{
+    gap: 12px;
+}
+
+.filter-container .filter .buttons>:first-child,
+.filter-container .filter .buttons :nth-child(2) {
+    margin-right: unset !important;
+    margin-left: unset !important
+}
+
+.tabs .mat-badge-content {
+    right: unset !important;
+    left: -30px !important;
+    line-height: 27px
+}
+
+.mat-menu-item {
+    direction: rtl
+}
+
+.mat-dialog-container {
+    direction: rtl
+}
+
+.form .wallets .head>div {
+    display: flex;
+    align-items: center
+}
+
+.form .wallets .head .number {
+    margin-left: unset;
+    margin-right: 10px;
+    font-size: 16px
+}
+
+.form .wallets .head .currency {
+    float: right !important
+}
+
+.form .wallets .content {
+    background-position-x: left
+}
+
+.form .buttons {
+    padding: 20px 0
+}
+
+.form .buttons .save {
+    margin-right: unset !important;
+    margin-left: 10px
+}
+
+.mat-mdc-select-value,
+.mat-form-field-label,
+.mat-input-element {
+    line-height: 20px
+}
+
+.toast-top-right {
+    right: unset;
+    left: 12px
+}
+
+.diactive-card .footer .state .status.diactive {
+    margin-left: unset;
+    margin-right: 10px
+}
+
+.friends .detail {
+    padding-left: unset;
+    padding-right: 12px
+}
+
+.friends .btn-accept {
+    margin-left: unset !important;
+    margin-right: 5px
+}
+
+.friends-container .tabs .tabs-body .first span {
+    margin: 12px 5px 0 0
+}
+
+.friends-menu button i {
+    padding-right: unset;
+    padding-left: 5px
+}
+
+.friend-profile .detail .data>div {
+    margin-left: unset !important;
+    margin-right: 257px
+}
+
+@media screen and (max-width: 992px) {
+    .friend-profile .detail .data>div {
+        margin-left: unset !important;
+        margin-right: 204px
+    }
+}
+
+.friend-profile .detail .data>div .btn {
+    padding: 12px 0 0 25px !important
+}
+
+.friend-profile .detail .data>div .mat-stroked-button {
+    margin-right: unset !important;
+    margin-left: 15px
+}
+
+.friend-profile .detail .profile-img {
+    left: unset !important;
+    right: 48px
+}
+
+@media screen and (max-width: 992px) {
+    .friend-profile .detail .profile-img {
+        left: unset !important;
+        right: 36px
+    }
+}
+
+.friend-profile .tabs .tabs-body>div .head img {
+    margin: 0 24px 0 12px !important
+}
+
+.carded .footer .button-gorup {
+    direction: rtl !important
+}
+
+.carded .header button {
+    transform: rotate(180deg)
+}
+
+.carded .footer .button-gorup {
+    direction: ltr !important
+}
+
+.items-card {
+    border: 1px solid;
+    position: relative
+}
+
+.items-card .content.bank .accounts-iban-number {
+    text-align: left
+}
+
+.items-card .content.bank .accounts-iban-number .email-text {
+    order: 2
+}
+
+.files-upload .select-file {
+    margin-right: unset;
+    margin-left: 6px
+}
+
+@media screen and (max-width: 576px) {
+    .files-upload .select-file {
+        margin-left: unset
+    }
+}
+
+.files-upload .select-file .icon-upload {
+    padding-right: unset;
+    padding-left: 10px
+}
+
+.files-upload .select-file .icon-delete {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.files-upload button {
+    margin-left: 0
+}
+
+form .rlt-en-input input {
+    text-align: left !important;
+    direction: ltr !important
+}
+
+form .rlt-en-input input::-webkit-input-placeholder {
+    text-align: right !important
+}
+
+form .rlt-en-input input::-moz-placeholder {
+    text-align: right !important
+}
+
+form .ltr-force-input .mat-form-field-label mat-label {
+    background: white;
+    padding: 0 5px
+}
+
+form .ltr-force-input .mat-form-field-outline-gap {
+    display: none
+}
+
+@media screen and (max-width: 576px) {
+    .container {
+        padding: 10px
+    }
+}
+
+.accounts .my-service .header .data .currency {
+    line-height: 26px
+}
+
+.accounts .my-service .content .account-num .ellipsis-box .email-text {
+    order: 2;
+    text-align: left
+}
+
+.accounts .my-service .content .account-num .ellipsis-box .ellipsis-img {
+    float: right
+}
+
+.sidebar {
+    margin-left: unset !important;
+    margin-right: 1%
+}
+
+table .detail-title {
+    margin-right: unset;
+    margin-left: 10px
+}
+
+table .table-arrow-icon {
+    margin: 0 auto
+}
+
+table .amount {
+    float: right !important;
+    direction: rtl
+}
+
+table .amount .currency-code {
+    float: left;
+    padding: 0 5px
+}
+
+table tr.mat-row .mat-mdc-cell:first-child,
+table tr.mat-header-row .mat-header-cell:first-child {
+    padding-left: unset !important;
+    padding-right: 24px !important
+}
+
+table td.table-collapse.mat-mdc-cell:first-child {
+    padding: 0 !important
+}
+
+table .money-amount {
+    color: #32496f
+}
+
+td.mat-mdc-cell:nth-child(2),
+th.mat-header-cell:nth-child(2) {
+    padding-left: 0;
+    padding-right: 10
+}
+
+td.mat-mdc-cell:nth-child(2),
+th.mat-header-cell:nth-child(2) {
+    padding-left: unset;
+    padding-right: 35px
+}
+
+@media screen and (max-width: 1200px) {
+
+    td.mat-mdc-cell:nth-child(2),
+    th.mat-header-cell:nth-child(2) {
+        padding-left: unset;
+        padding-right: 15px
+    }
+}
+
+@media screen and (max-width: 768px) {
+
+    td.mat-mdc-cell:nth-child(2),
+    th.mat-header-cell:nth-child(2) {
+        padding-left: unset;
+        padding-right: 10px !important
+    }
+}
+
+@media screen and (max-width: 576px) {
+
+    td.mat-mdc-cell:nth-child(2),
+    th.mat-header-cell:nth-child(2) {
+        padding-left: unset;
+        padding-right: 0px
+    }
+}
+
+.faq-category .tabs .body .side>div i {
+    transform: rotate(180deg)
+}
+
+.faq-category .tabs .body .content {
+    padding: 0 37px 0 0
+}
+
+.faq-category .tabs .mdc-tab__content i {
+    --font: Inter_TC
+}
+
+.deposit .mony-currency .mat-expansion-panel-header {
+    font-size: 18px !important
+}
+
+@media screen and (max-width: 992px) {
+    .deposit .mony-currency .mat-expansion-panel-header {
+        font-size: 16px !important
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .deposit .mony-currency .mat-expansion-panel-header {
+        font-size: 16px !important
+    }
+}
+
+.request .stepper .select-bank .bank .card-number .value {
+    padding-left: unset;
+    padding-right: 5px
+}
+
+.request .stepper .pay-now .pay-amount .value {
+    margin-left: unset;
+    margin-right: 5px
+}
+
+.table-title-online {
+    margin-top: 50px
+}
+
+@media screen and (min-width: 1200px) {
+
+    .table-deposit-history tr.mat-row .mat-mdc-cell:nth-child(2),
+    .table-deposit-history tr.mat-header-row .mat-header-cell:nth-child(2) {
+        padding-left: unset !important;
+        padding-right: 24px !important
+    }
+}
+
+@media screen and (min-width: 1200px) {
+
+    .table-deposit-online-history tr.mat-row .mat-mdc-cell:nth-child(2),
+    .table-deposit-online-history tr.mat-header-row .mat-header-cell:nth-child(2) {
+        padding-left: unset !important;
+        padding-right: 24px !important
+    }
+}
+
+.profile .side .content>div .more-detail .user-group {
+    border-left: unset !important;
+    border-right: 1px solid
+}
+
+.profile .side .content>div .mat-icon {
+    margin-right: auto;
+    margin-left: unset;
+    transform: rotate(180deg)
+}
+
+.profile .side .content .detail .gmail .icon {
+    margin-left: unset;
+    margin-right: 25px
+}
+
+.profile .profile-content {
+    margin-left: unset;
+    margin-right: 2%
+}
+
+@media screen and (min-width: 1500px) {
+    .profile .profile-content {
+        margin-left: unset;
+        margin-right: 1.5%
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .profile .profile-content {
+        margin-left: 0;
+        margin-right: 0
+    }
+}
+
+.profile .profile-content .tabs .title {
+    margin-top: 0
+}
+
+.profile .profile-content .form-btn button {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.profile .faq-category .tabs .title {
+    margin-top: 10px
+}
+
+.profile .faq-category .tabs .title i {
+    padding-left: unset;
+    padding-right: 10px
+}
+
+.profile .address .information .content .address-btn button {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.profile form .confirm-input {
+    text-align: end
+}
+
+.profile .mobile form.verify .green .click-here {
+    padding-left: unset;
+    padding-right: 10px;
+    float: left;
+    cursor: pointer
+}
+
+.profile .mobile form.send-code .mobile-num .area-code {
+    margin-right: unset;
+    margin-left: 3%
+}
+
+.profile .personal-info .verify-btn-group .white {
+    margin-right: unset;
+    margin-left: 12px
+}
+
+.photo .select-option .option .txt-div {
+    border-left: unset;
+    border-right: 1px solid
+}
+
+.photo-code-container .code-input {
+    direction: ltr
+}
+
+.take-image .capture-btn .white {
+    margin-right: 4%;
+    margin-left: unset !important
+}
+
+.profile .address .verify .verify-btn-group button {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.select-service-container.pay::after,
+.select-service-container.pay::before {
+    left: unset !important;
+    right: 25%
+}
+
+.select-service-container.get::after,
+.select-service-container.get::before {
+    right: unset !important;
+    left: 25%
+}
+
+.selected-card-container .arrow {
+    transform: rotate(180deg)
+}
+
+@media screen and (min-width: 1200px) {
+
+    .table-exchange-history tr.mat-row .mat-mdc-cell:nth-child(2),
+    .table-exchange-history tr.mat-header-row .mat-header-cell:nth-child(2) {
+        padding-left: unset !important;
+        padding-right: 24px !important
+    }
+}
+
+.request-summary .content {
+    padding: 20px 15px
+}
+
+.request-summary .content .data {
+    display: flex;
+    align-items: center
+}
+
+.request-summary .content .data .value {
+    padding-left: unset;
+    padding-right: 13px
+}
+
+.request-summary .content .data .status {
+    margin-left: unset;
+    margin-right: 5px
+}
+
+.request-summary .message {
+    padding-left: unset !important;
+    padding-right: 30px
+}
+
+.request-summary img {
+    right: unset;
+    left: 0
+}
+
+.request-sidebar-container {
+    right: unset;
+    left: 0
+}
+
+.request-sidebar .icon-cancel {
+    right: unset !important;
+    left: 15px
+}
+
+.request-sidebar .icon-cancel {
+    right: unset;
+    left: 15px
+}
+
+.personal-message.my-message .text {
+    margin-right: unset;
+    margin-left: 13px
+}
+
+.personal-message.my-message .text:after {
+    right: unset;
+    left: -8px
+}
+
+.personal-message.my-message .time {
+    right: unset;
+    left: 102px
+}
+
+.personal-message.tc-message .text {
+    margin-left: unset;
+    margin-right: 13px
+}
+
+.personal-message.tc-message .time {
+    right: unset;
+    left: 50px
+}
+
+.personal-message.tc-message .text:after {
+    left: unset;
+    right: -8px
+}
+
+.send-message-container .send-message .add-file {
+    margin: 0 2px 0 5px
+}
+
+.send-message-container .send-message .add-file .add-item {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.send-message-container .send-message .add-file .added-item .close {
+    right: unset;
+    left: 3px
+}
+
+.send-message-container .send-message .send-icon {
+    right: unset;
+    left: 17px
+}
+
+@media screen and (max-width: 1200px) {
+    .send-message-container .send-message .is-open {
+        margin-left: 18px !important
+    }
+}
+
+.send-message-container .send-message .footer .place-holder {
+    left: unset;
+    right: 35px
+}
+
+.send-message-container .send-message .footer .icon-send {
+    line-height: 40px;
+    padding-left: unset;
+    padding-right: 7px;
+    margin-right: unset;
+    margin-left: 10px;
+    right: unset;
+    left: 6px
+}
+
+@media screen and (max-width: 1200px) {
+    .send-message-container .send-message .footer .icon-send {
+        right: unset;
+        left: 13px
+    }
+}
+
+.send-message-container .send-message .footer .icon-attach-file {
+    margin-right: unset;
+    margin-left: 10px;
+    right: unset;
+    left: 47px
+}
+
+@media screen and (max-width: 1200px) {
+    .send-message-container .send-message .footer .icon-attach-file {
+        right: unset;
+        left: 55px
+    }
+}
+
+@media screen and (min-width: 992px) and (max-width: 1200px) {
+    .request-sidebar-container {
+        right: unset;
+        left: 0
+    }
+}
+
+@media screen and (min-width: 768px) and (max-width: 992px) {
+    .request-sidebar-container {
+        right: unset;
+        left: 0
+    }
+}
+
+@media screen and (min-width: 1200px) {
+    .support-sidebar-remove {
+        transform: translateX(-100%) !important;
+        display: none
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .support-sidebar-remove {
+        transform: translateX(100%);
+        animation: reqSidebarHideRtl 500ms
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .support-sidebar-remove {
+        display: none
+    }
+}
+
+@media screen and (min-width: 1200px) {
+    .support-sidebar-add {
+        transform: none !important;
+        display: block
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .support-sidebar-add {
+        animation: reqSidebarShowRtl 0.5s
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .support-sidebar-add {
+        display: block
+    }
+}
+
+.personal-message .text .file-progress {
+    left: 5px;
+    right: unset
+}
+
+@-webkit-keyframes reqSidebarShowRtl {
+    from {
+        transform: translateX(60vw)
+    }
+
+    to {
+        transform: translateX(100vw)
+    }
+}
+
+@-webkit-keyframes reqSidebarHideRtl {
+    from {
+        transform: translateX(100vw)
+    }
+
+    to {
+        transform: translateX(-100%)
+    }
+}
+
+.settings .settings-sidebar {
+    margin-right: unset;
+    margin-left: 1.5%
+}
+
+@media screen and (max-width: 768px) {
+    .settings .settings-sidebar {
+        margin-left: unset
+    }
+}
+
+.settings .settings-content tc-security-settings .send-confirmation .content .recive-code .confirm-email {
+    text-align: end
+}
+
+.quick-access .content .menu {
+    right: unset !important;
+    left: 0
+}
+
+.banks-container .banks .title .text {
+    margin-left: unset;
+    margin-right: 13px
+}
+
+.withdraw-select-country .body .country .icon-check-circle {
+    right: unset !important;
+    left: 10px
+}
+
+.withdraw-select-country .body .country .data {
+    padding-left: unset;
+    padding-right: 15px
+}
+
+@media screen and (max-width: 768px) {
+    .table-withdrawal-history .cdk-column-more {
+        padding-right: 14px !important;
+        padding-left: 24px !important;
+        width: 65px
+    }
+}
+
+.table-withdrawal-history .cdk-column-trackingNumber {
+    padding-right: 24px !important;
+    padding-left: 34px !important
+}
+
+@media screen and (max-width: 768px) {
+    .table-withdrawal-history .cdk-column-trackingNumber {
+        padding-right: 14px !important;
+        padding-left: 24px !important
+    }
+}
+
+.request .stepper .request-confirmation .head {
+    padding-left: unset !important;
+    padding-right: 18px
+}
+
+.request .stepper .request-confirmation .head i {
+    padding-right: unset !important;
+    padding-left: 6px
+}
+
+.request .stepper .request-confirmation .content .recive-code .confirm-email .mat-input-element {
+    text-align: left;
+    order: 2
+}
+
+.request .stepper .request-confirmation .content .recive-code .confirm-email button {
+    order: 1
+}
+
+.invoice-list .table-row .value {
+    border-left: unset !important;
+    border-right: 1px solid
+}
+
+.request .stepper-xs .mat-mdc-tab .line {
+    right: -47px;
+    left: unset
+}
+
+.request .stepper-sm .mat-mdc-tab .line {
+    right: -65px;
+    left: unset
+}
+
+.request .stepper-md.stepper-md-4 .mat-mdc-tab .line {
+    right: -80px;
+    left: unset
+}
+
+.request .stepper-md.stepper-md-5 .mat-mdc-tab .line,
+.request .stepper-md.stepper-md-6 .mat-mdc-tab .line {
+    right: -60px;
+    left: unset
+}
+
+.request .stepper-md.stepper-md-7 .mat-mdc-tab .line {
+    right: -64px;
+    left: unset
+}
+
+.request .stepper-md .mat-mdc-tab .line {
+    left: unset;
+    right: -25px
+}
+
+.request .stepper-lg-4 .mat-mdc-tab .line {
+    left: unset;
+    right: -145px
+}
+
+.request .stepper-lg-5 .mat-mdc-tab .line,
+.request .stepper-lg-6 .mat-mdc-tab .line,
+.request .stepper-lg-7 .mat-mdc-tab .line {
+    right: -88px;
+    left: unset
+}
+
+.request .stepper-xl-4 .mat-mdc-tab .line {
+    left: unset;
+    right: -160px
+}
+
+.stepper-xl-5 .mat-mdc-tab .line,
+.stepper-xl-6 .mat-mdc-tab .line {
+    left: unset;
+    right: -137px
+}
+
+.stepper-xl-7 .mat-mdc-tab .line {
+    right: -99px;
+    left: unset
+}
+
+.payment-list .date {
+    margin-left: unset;
+    margin-right: 10px
+}
+
+.payment-list .date .text {
+    padding-left: unset;
+    padding-right: 5px
+}
+
+.payment-list .amount {
+    margin-left: unset;
+    margin-right: auto;
+    text-align: right;
+    direction: rtl
+}
+
+@media screen and (max-width: 576px) {
+    .payment-list .amount {
+        margin-right: unset;
+        padding-left: unset;
+        padding-right: 5px
+    }
+}
+
+.payment-list .amount .text {
+    padding-left: unset;
+    padding-right: 5px;
+    direction: rtl
+}
+
+.payment-list .amount .text span {
+    min-width: unset
+}
+
+.payment-list .state {
+    margin-left: unset;
+    margin-right: 20px
+}
+
+.payment-list .state .status {
+    float: left
+}
+
+.payment-list .delete {
+    margin-left: unset;
+    margin-right: 20px;
+    cursor: pointer
+}
+
+.payment-list .total .list .list-row .status-div {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.payment-list .total .list .list-row .value .red .amount {
+    direction: ltr;
+    display: inline-block
+}
+
+.third-party .wallet-select .wallet {
+    direction: ltr !important
+}
+
+.third-party .wallet-select .mat-expansion-panel-header-title .title {
+    padding: 0px 15px 0 13px
+}
+
+@media screen and (max-width: 992px) {
+    .third-party .wallet-select .mat-expansion-panel-header-title .title {
+        padding: 0px 0 0 13px
+    }
+}
+
+.request .sidebar-btn .side-msg {
+    margin-left: unset;
+    margin-right: 9px
+}
+
+.wallets.edit {
+    direction: ltr
+}
+
+.wallets.edit .head>div {
+    display: flex;
+    align-items: center
+}
+
+.wallets.edit .content ::after {
+    background-position-x: right !important
+}
+
+.request-payment-type .carded .mat-expansion-panel-header {
+    padding: 0 24px 0 12px !important;
+    padding-top: 10px !important
+}
+
+.request-payment-type .carded .mat-expansion-panel-header .request-list-btn .icon-arrow-right {
+    float: left !important
+}
+
+.request-payment-type .carded .mat-expansion-panel-header .request-list-btn .icon-arrow-right::before {
+    transform: rotate(180deg)
+}
+
+.request-payment-type .mat-expansion-panel .mat-expansion-panel-header-title .request-list-btn .icon-arrow-right {
+    margin-left: unset;
+    margin-right: 18px
+}
+
+.request-payment-type .mat-expansion-panel .mat-expansion-panel-header-title .request-list-btn .icon-arrow-right::before {
+    transform: rotate(180deg)
+}
+
+.request-payment-type .mony-currency .mat-expansion-panel-header {
+    font-size: 18px !important
+}
+
+@media screen and (max-width: 992px) {
+    .request-payment-type .mony-currency .mat-expansion-panel-header {
+        font-size: 16px !important
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .request-payment-type .mony-currency .mat-expansion-panel-header {
+        font-size: 16px !important
+    }
+}
+
+.request-payment-type .digital-currency .body .sub-service .icon {
+    right: unset !important;
+    left: 7px
+}
+
+.wallet.third-party-detail .thirt-party-name {
+    left: unset;
+    right: 5px
+}
+
+.wallet.third-party-detail .thirt-party-name i {
+    padding-right: unset;
+    padding-left: 5px
+}
+
+.navbar-wallets .wallet .wallet-content .option-menu {
+    right: unset !important;
+    left: 1px
+}
+
+.navbar-wallets::after {
+    content: "";
+    right: 160px;
+    left: unset
+}
+
+@media screen and (max-width: 576px) {
+    .navbar-wallets::after {
+        right: 80px;
+        left: unset
+    }
+}
+
+.inline-alert div {
+    border-left: 1px solid !important;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    border-right: 9px solid !important
+}
+
+.country-code-selector {
+    direction: ltr
+}
+
+.country-code-selector .cart {
+    left: unset;
+    right: 6px
+}
+
+.country-code-selector .mat-mdc-form-field{
+    text-align: left !important
+}
+
+.country-code-selector .mat-form-field-appearance-outline .mat-form-field-outline-start {
+    border-left-style: solid !important;
+    border-right-style: none !important;
+    border-radius: 0 5px 5px 0
+}
+
+.country-code-selector .mat-form-field-appearance-outline .mat-form-field-outline-end {
+    border-right-style: solid !important;
+    border-left-style: none !important;
+    border-radius: 5px 0 0 5px
+}
+
+.country-code-selector .mat-form-field-label-wrapper {
+    right: auto !important;
+    left: 0 !important
+}
+
+.country-code-selector .mat-form-field-appearance-outline .mat-form-field-outline-start {
+    border-radius: 5px 0 0 5px !important
+}
+
+.country-code-selector .mat-form-field-appearance-outline .mat-form-field-outline-end {
+    border-radius: 0 5px 5px 0 !important
+}
+
+.country-code-selector .mat-form-field-appearance-outline.mat-form-field-can-float.mat-form-field-should-float .mat-form-field-outline-gap {
+    border-top-color: currentColor !important
+}
+
+.country-code-selector .mat-form-field-outline-gap {
+    display: none !important
+}
+
+.country-code-selector .mat-form-field-label {
+    text-align: right !important
+}
+
+.country-code-selector .mat-form-field-label mat-label {
+    background-color: white !important;
+    padding: 0 5px !important
+}
+
+.breadMain .route .icon-arrow-right::before {
+    transform: rotate(180deg) !important
+}
+
+.breadMain .section .bread-icon {
+    margin-right: unset;
+    margin-left: 10px;
+    transform: rotate(180deg)
+}
+
+.dashboard .header .title i {
+    padding-right: unset;
+    padding-left: 10px
+}
+
+.dashboard .header .btn-type .mat-button-wrapper i {
+    margin-left: unset;
+    margin-right: 35px
+}
+
+.dashboard .header .date i {
+    float: left
+}
+
+.dashboard .header .setting i {
+    padding-right: unset;
+    padding-left: 10px
+}
+
+.dashboard .verfication .content .items .verify-now .icon {
+    right: unset;
+    left: 15px
+}
+
+.dashboard .verfication .content .items .verified .icon {
+    right: unset;
+    left: 15px
+}
+
+.dashboard .verfication .content .items .personal-info .txt {
+    padding-left: unset;
+    padding-right: 15px
+}
+
+.dashboard .verfication .content .items .personal-info .icon {
+    right: unset;
+    left: 15px
+}
+
+.dashboard .verfication .content .items .address .txt {
+    padding-left: unset;
+    padding-right: 15px
+}
+
+.dashboard .verfication .content .items .address .icon {
+    right: unset;
+    left: 15px
+}
+
+.dashboard .dashboard-menu tc-dashboard-quick-access {
+    margin-right: unset;
+    margin-left: 2%
+}
+
+@media screen and (max-width: 1200px) {
+    .dashboard .dashboard-menu tc-dashboard-quick-access {
+        margin-left: 0
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .dashboard .dashboard-menu .points {
+        margin-right: unset;
+        margin-left: 0
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .dashboard .dashboard-menu .points {
+        margin-left: 0
+    }
+}
+
+.dashboard .dashboard-menu .points .mdc-icon-button {
+    right: unset;
+    left: 0
+}
+
+.dashboard .tabels .tabel .body table .status {
+    float: unset;
+    float: right
+}
+
+@media screen and (max-width: 1200px) {
+    .dashboard .tabels .exchange-rate {
+        margin-left: 0
+    }
+}
+
+.dashboard .tabels .new-status {
+    margin-right: unset;
+    margin-left: 1%
+}
+
+.profile .personal-info .verify-option .detail {
+    border-left: 0;
+    border-right: 1px solid
+}
+
+.profile .personal-info .verify-option .detail .arrow {
+    transform: rotate(180deg)
+}
+
+.profile .personal-info .verify-personal .content .show-image .txt {
+    margin-right: unset;
+    margin-left: 40px
+}
+
+@media screen and (max-width: 576px) {
+    .profile .personal-info .verify-personal .content .show-image .txt {
+        margin-right: unset;
+        margin-left: 0
+    }
+}
+
+.payment-dialog .body .select-file .icon-request-delete {
+    margin-left: unset !important;
+    margin-right: auto
+}
+
+.banks-container .banks .title .text {
+    margin-left: unset;
+    margin-right: 13px
+}
+
+.withdraw-select-country .body .country .icon-check-circle {
+    right: unset !important;
+    left: 10px
+}
+
+.withdraw-select-country .body .country .data {
+    padding-left: unset;
+    padding-right: 15px
+}
+
+@media screen and (max-width: 768px) {
+    .table-withdrawal-history .cdk-column-more {
+        padding-right: 14px !important;
+        padding-left: 24px !important;
+        width: 65px
+    }
+}
+
+.table-withdrawal-history .cdk-column-trackingNumber {
+    padding-right: 24px !important;
+    padding-left: 34px !important
+}
+
+@media screen and (max-width: 768px) {
+    .table-withdrawal-history .cdk-column-trackingNumber {
+        padding-right: 14px !important;
+        padding-left: 24px !important
+    }
+}
+
+.request .deposit-credit-payments .total {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.request .deposit-credit-payments .total .value {
+    padding-left: unset;
+    padding-right: 5px
+}
+
+.request .deposit-credit-payments .mat-expansion-panel .mat-expansion-panel-header .peyment-date {
+    padding-left: unset;
+    padding-right: 10px
+}
+
+.request .deposit-credit-payments .mat-expansion-panel .mat-expansion-panel-header .Value {
+    padding-left: 5px;
+    padding-right: unset
+}
+
+.request .deposit-credit-payments .mat-expansion-panel .mat-expansion-panel-body .attachment .file-upload {
+    margin-left: unset;
+    margin-right: 2.5%
+}
+
+.request .deposit-credit-payments .mat-expansion-panel .mat-expansion-panel-body .attachment .file-upload span {
+    padding-left: unset;
+    padding-right: 5px
+}
+
+.request .deposit-credit-payments .mat-expansion-panel .mat-expansion-panel-body .peyment-info .value {
+    margin-left: unset;
+    margin-right: 2.5%
+}
+
+@media screen and (min-width: 1200px) {
+
+    .table-send-history tr.mat-row .mat-mdc-cell:nth-child(2),
+    .table-send-history tr.mat-header-row .mat-header-cell:nth-child(2) {
+        padding-left: unset !important;
+        padding-right: 24px !important
+    }
+}
+
+.archive .request-summary .footer button {
+    float: left
+}
+
+.archive .inline-alert div {
+    border-left: unset !important;
+    border-right: unset !important;
+    border-top: unset !important;
+    border-bottom: unset !important
+}
+
+.archive .inline-alert .info {
+    padding: 10px 15px;
+    border-radius: 4px;
+    border-top: 1px solid !important;
+    border-bottom: 1px solid !important;
+    border-left: 1px solid !important;
+    border-right: 9px solid !important;
+    white-space: pre-line
+}
+
+.points-summary .attention .txt {
+    margin-top: 0
+}
+
+@media screen and (min-width: 1200px) {
+
+    .table-point-history tr.mat-row .mat-mdc-cell:nth-child(2),
+    .table-point-history tr.mat-header-row .mat-header-cell:nth-child(2) {
+        padding-left: unset !important;
+        padding-right: 24px !important
+    }
+}
+
+@media screen and (min-width: 768px) {
+
+    .table-point-transactions-history tr.mat-row .mat-mdc-cell:nth-child(2),
+    .table-point-transactions-history tr.mat-header-row .mat-header-cell:nth-child(2) {
+        padding-left: unset !important;
+        padding-right: 24px !important
+    }
+}
+
+.voucher-list .date {
+    margin-left: unset !important;
+    margin-right: 10px
+}
+
+.voucher-list .date .text {
+    padding-left: unset;
+    padding-right: 5px
+}
+
+.voucher-list .amount {
+    direction: rtl
+}
+
+.voucher-list .amount .text {
+    padding-left: unset;
+    padding-right: 5px
+}
+
+@media screen and (max-width: 576px) {
+    .voucher-list .amount {
+        margin-right: unset;
+        margin-left: auto !important
+    }
+}
+
+.voucher-list .download-btn {
+    margin-left: unset;
+    margin-right: auto
+}
+
+.voucher-list .download-btn i {
+    padding-right: unset;
+    padding-left: 5px
+}
+
+.voucher-list .voucher-data {
+    display: flex;
+    justify-content: flex-start
+}
+
+@media screen and (min-width: 1200px) {
+
+    .table-voucher-history tr.mat-row .mat-mdc-cell:nth-child(2),
+    .table-voucher-history tr.mat-header-row .mat-header-cell:nth-child(2) {
+        padding-left: unset !important;
+        padding-right: 24px !important
+    }
+}
+
+.inline-alert div {
+    border-left: 1px solid !important;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    border-right: 9px solid !important
+}
+
+.auth-dialog .content .text {
+    font-size: 16px
+}
+
+.auth-dialog .content .auth-items .list-wrapper .list {
+    font-size: 14px
+}
+
+.auth-dialog .content .auth-items .list-wrapper .list .auth-required {
+    font-size: 12px
+}
+
+.dialog .ic-close {
+    right: auto;
+    left: 15px
+}
+
+.friends .btn {
+    left: 7px;
+    right: unset !important
+}
+
+.friend-profile .detail .data>div {
+    margin-left: unset !important;
+    margin-right: 257px
+}
+
+@media screen and (max-width: 992px) {
+    .friend-profile .detail .data>div {
+        margin-left: unset !important;
+        margin-right: 204px
+    }
+}
+
+.friend-profile .detail .data>div .btn {
+    padding: 12px 0 0 25px !important
+}
+
+.friend-profile .detail .data>div .mat-stroked-button {
+    margin-right: unset !important;
+    margin-left: 15px
+}
+
+.friend-profile .detail .profile-img {
+    left: unset !important;
+    right: 48px
+}
+
+@media screen and (max-width: 992px) {
+    .friend-profile .detail .profile-img {
+        left: unset !important;
+        right: 36px
+    }
+}
+
+.friend-profile .tabs .cards>div .head img {
+    margin: 0 24px 0 12px !important
+}
+
+.friend-profile .friend-wallets .header button {
+    transform: rotate(180deg)
+}
+
+.friend-profile .friend-wallets .body .wallets {
+    direction: ltr
+}
+
+.friend-profile .friend-wallets .body .wallets .footer {
+    direction: rtl
+}
+
+.friend-profile .friend-wallets .body .wallets .footer i {
+    padding-left: unset !important;
+    padding-right: 10px
+}
+
+.friend-profile .friend-wallets .body .wallets .footer i::before {
+    transform: rotate(180deg)
+}
+
+.payment-dialog .footer .button-gorup {
+    direction: ltr !important
+}
+
+.announcement .announcement-main {
+    margin-right: unset !important;
+    margin-left: 1%
+}
+
+@media screen and (max-width: 1500px) {
+    .announcement .announcement-main {
+        margin-right: unset !important;
+        margin-left: 2%
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .announcement .announcement-main {
+        margin-left: unset
+    }
+}
+
+.announcement .announcement-side .archives .archive .date {
+    right: unset !important;
+    left: 10px
+}
+
+.empty-template .text {
+    line-height: 50px
+}
+
+.slideshow-container .icon-arrow-use-right {
+    right: 0;
+    padding: 3px 7px 2px 10px
+}
+
+@media screen and (max-width: 768px) {
+    .slideshow-container .icon-arrow-use-right {
+        padding: 0px 6px 1px 8px
+    }
+}
+
+.slideshow-container .icon-arrow-use-left {
+    left: 0;
+    padding: 6px 11px 0px 8px
+}
+
+@media screen and (max-width: 768px) {
+    .slideshow-container .icon-arrow-use-left {
+        padding: 0px 7px 1px 7px
+    }
+}
+
+.slideshow-container .icon-arrow-use-left i:before {
+    transform: rotate(180deg)
+}
+
+.wallet-container .wallet .wallet-head {
+    padding: 0 16px 0 7px
+}
+
+.wallet-container .wallet .wallet-head .who-see i {
+    margin-right: unset;
+    margin-left: 6px
+}
+
+.wallet-container .wallet .wallet-content .detail .wallet-icon {
+    margin-right: unset;
+    margin-left: 15px
+}
+
+.wallet-container .wallet .wallet-content .detail .info .type {
+    line-height: 22px
+}
+
+.wallet-container .wallet .wallet-content .amount {
+    left: unset;
+    right: 16px;
+    direction: rtl
+}
+
+.wallet-container .wallet .wallet-content .amount .currency {
+    line-height: 10px;
+    height: 16px
+}
+
+.wallet-container .wallet .wallet-content::before {
+    content: "";
+    background-image: url("../../../../assets/media/images/wallets/wallet-wave-rtl.png");
+    background-position-y: center;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    position: absolute;
+    background-position-y: center;
+    background-size: cover
+}
+
+.wallet-container .wallet.selectable .wallet-content .icon-check-circle {
+    right: unset;
+    left: 6px
+}
+
+.transmitter-detail-wrapper .transmitter-detail .top-description {
+    border: 1px solid !important;
+    border-right: 9px solid !important
+}
+
+.full-width-div {
+    direction: rtl
+}
+
+@media screen and (min-width: 1200px) {
+    .support-float-buttons {
+        right: unset;
+        left: 0
+    }
+
+    .support-float-buttons .float-btn {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0
+    }
+
+    .support-float-buttons .float-btn mat-icon {
+        margin-right: 30px
+    }
+}
