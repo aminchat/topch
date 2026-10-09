@@ -1,0 +1,56 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberData(clubId) {
+      return firestore.get(/databases/(default)/documents/clubs/$(clubId)/members/$(request.auth.uid)).data;
+    }
+
+    function isMember(clubId) {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/clubs/$(clubId)/members/$(request.auth.uid))
+        && memberData(clubId).active == true
+        && memberData(clubId).uid == request.auth.uid;
+    }
+
+    function isOwner(clubId) {
+      return isMember(clubId) && memberData(clubId).role == 'owner';
+    }
+
+    function isPlayer(clubId) {
+      return isMember(clubId) && memberData(clubId).role == 'player';
+    }
+
+    function bookingData(clubId, bookingId) {
+      return firestore.get(/databases/(default)/documents/clubs/$(clubId)/bookings/$(bookingId)).data;
+    }
+
+    function isRequester(clubId, bookingId) {
+      let booking = bookingData(clubId, bookingId);
+      return isPlayer(clubId)
+        && (('accountUid' in booking && booking.accountUid == request.auth.uid)
+          || (!('accountUid' in booking) && booking.createdByUid == request.auth.uid));
+    }
+
+    function validReceiptFile(fileName) {
+      return fileName.matches('^[A-Za-z0-9_-]+[.](jpg|jpeg|png|webp|pdf)$');
+    }
+
+    match /clubs/{clubId}/bookings/{bookingId}/{fileName} {
+      // Receipts are private to the club owner and the booking's member account UID.
+      allow read: if isOwner(clubId) || isRequester(clubId, bookingId);
+
+      allow create, update: if isRequester(clubId, bookingId)
+        && bookingData(clubId, bookingId).status in ['awaiting_payment', 'needs_correction']
+        && validReceiptFile(fileName)
+        && request.resource.size > 0
+        && request.resource.size <= 8 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
+      allow delete: if isOwner(clubId) || isRequester(clubId, bookingId);
+    }
+  }
+}

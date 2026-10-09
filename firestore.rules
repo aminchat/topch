@@ -1,0 +1,953 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(clubId, uid) {
+      return /databases/$(database)/documents/clubs/$(clubId)/members/$(uid);
+    }
+
+    function memberData(clubId) {
+      return get(memberPath(clubId, request.auth.uid)).data;
+    }
+
+    function isMember(clubId) {
+      return signedIn()
+        && exists(memberPath(clubId, request.auth.uid))
+        && memberData(clubId).active == true
+        && memberData(clubId).uid == request.auth.uid;
+    }
+
+    function isOwner(clubId) {
+      return isMember(clubId) && memberData(clubId).role == 'owner';
+    }
+
+    function isPlayer(clubId) {
+      return isMember(clubId) && memberData(clubId).role == 'player';
+    }
+
+    function accountUid(data) {
+      return ('accountUid' in data && data.accountUid is string) ? data.accountUid : data.createdByUid;
+    }
+
+    function isOwnAccountRecord(clubId, data) {
+      return isPlayer(clubId)
+        && (('accountUid' in data && data.accountUid == request.auth.uid)
+          || data.createdByUid == request.auth.uid);
+    }
+
+    function validMemberAccount(clubId, uid) {
+      return uid == request.auth.uid
+        || (exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid))
+          && get(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid)).data.uid == uid
+          && get(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid)).data.active == true
+          && get(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid)).data.role == 'player');
+    }
+
+    function validToman(amount) {
+      return amount is int && amount > 0 && amount <= 1000000000;
+    }
+
+    function validNonnegativeToman(amount) {
+      return amount is int && amount >= 0 && amount <= 1000000000;
+    }
+
+    function validTime(value) {
+      return value is string && value.matches('^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$');
+    }
+
+    function scheduleIsPublic(clubId) {
+      return exists(/databases/$(database)/documents/clubs/$(clubId))
+        && get(/databases/$(database)/documents/clubs/$(clubId)).data.publicScheduleEnabled == true;
+    }
+
+    function validScheduleSlot(startTime, endTime) {
+      return (startTime == '00:00' && endTime == '01:30')
+        || (startTime == '01:30' && endTime == '03:00')
+        || (startTime == '03:00' && endTime == '04:30')
+        || (startTime == '04:30' && endTime == '06:00')
+        || (startTime == '06:00' && endTime == '07:30')
+        || (startTime == '07:30' && endTime == '09:00')
+        || (startTime == '09:00' && endTime == '10:30')
+        || (startTime == '10:30' && endTime == '12:00')
+        || (startTime == '12:00' && endTime == '13:30')
+        || (startTime == '13:30' && endTime == '15:00')
+        || (startTime == '15:00' && endTime == '16:30')
+        || (startTime == '16:30' && endTime == '18:00')
+        || (startTime == '18:00' && endTime == '19:30')
+        || (startTime == '19:30' && endTime == '21:00')
+        || (startTime == '21:00' && endTime == '22:30')
+        || (startTime == '22:30' && endTime == '24:00');
+    }
+
+    function validBookingLockIds(data) {
+      return data.lockIds is list
+        && data.lockIds.size() == 1
+        && data.lockIds[0] == data.courtId + '_' + data.date + '_' + data.startTime;
+    }
+
+    function validBookingCore(data) {
+      return data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && validScheduleSlot(data.startTime, data.endTime)
+        && data.courtId is string
+        && data.courtId.size() > 0
+        && data.courtId.size() <= 100
+        && data.courtId.matches('^[A-Za-z0-9_-]+$')
+        && data.courtName is string
+        && data.courtName.size() > 0
+        && data.courtName.size() <= 100
+        && data.sport in ['volleyball', 'futsal', 'other']
+        && data.bookedForName is string
+        && data.bookedForName.size() > 0
+        && data.bookedForName.size() <= 100
+        && validNonnegativeToman(data.priceToman)
+        && data.note is string
+        && data.note.size() <= 1000
+        && validBookingLockIds(data);
+    }
+
+    function validPublicProjection(data) {
+      return data.keys().hasOnly(['date', 'startTime', 'endTime', 'courtId', 'courtName', 'status', 'updatedAt'])
+        && data.keys().hasAll(['date', 'startTime', 'endTime', 'courtId', 'courtName', 'status', 'updatedAt'])
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && validScheduleSlot(data.startTime, data.endTime)
+        && data.courtId is string
+        && data.courtId.matches('^[A-Za-z0-9_-]+$')
+        && data.courtName is string
+        && data.courtName.size() > 0
+        && data.courtName.size() <= 100
+        && data.status in ['booked', 'cancelled']
+        && data.updatedAt == request.time;
+    }
+
+    function validAttachmentMetadata(data, clubId, bookingId) {
+      return data.attachmentPath is string
+        && data.attachmentPath.matches('^clubs/' + clubId + '/bookings/' + bookingId + '/[A-Za-z0-9_-]+[.](jpg|jpeg|png|webp|pdf)$')
+        && data.attachmentName is string
+        && data.attachmentName.size() > 0
+        && data.attachmentName.size() <= 200
+        && data.attachmentContentType in ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+        && data.attachmentSize is int
+        && data.attachmentSize > 0
+        && data.attachmentSize <= 8388608;
+    }
+
+    function notificationHasMessage(clubId, notificationData, senderUid, senderRole) {
+      return notificationData.messageId is string
+        && notificationData.messageId.size() > 0
+        && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(notificationData.bookingId)/messages/$(notificationData.messageId))
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(notificationData.bookingId)/messages/$(notificationData.messageId)).data.bookingId == notificationData.bookingId
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(notificationData.bookingId)/messages/$(notificationData.messageId)).data.senderUid == senderUid
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(notificationData.bookingId)/messages/$(notificationData.messageId)).data.senderRole == senderRole
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(notificationData.bookingId)/messages/$(notificationData.messageId)).data.createdAt == request.time;
+    }
+
+    match /clubs/{clubId} {
+      // Private club configuration is visible only after UID-based membership is active.
+      allow get: if isMember(clubId);
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.clubName is string
+        && request.resource.data.clubName.size() > 0
+        && request.resource.data.clubName.size() <= 100
+        && request.resource.data.defaultSessionPriceToman is int
+        && request.resource.data.defaultSessionPriceToman >= 0
+        && request.resource.data.publicScheduleEnabled is bool
+        && request.resource.data.ownerPhone is string
+        && request.resource.data.ownerPhone.size() <= 30
+        && request.resource.data.courts is list
+        && request.resource.data.courts.size() <= 100
+        && request.resource.data.archivedCourts is list
+        && request.resource.data.archivedCourts.size() <= 200
+        && request.resource.data.joinEnabled == true
+        && request.resource.data.createdAt == request.time
+        && existsAfter(memberPath(clubId, request.auth.uid))
+        && getAfter(memberPath(clubId, request.auth.uid)).data.role == 'owner'
+        && getAfter(memberPath(clubId, request.auth.uid)).data.active == true
+        && existsAfter(/databases/$(database)/documents/clubInvites/$(clubId))
+        && getAfter(/databases/$(database)/documents/clubInvites/$(clubId)).data.clubName == request.resource.data.clubName
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/clubMemberships/$(clubId))
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/clubMemberships/$(clubId)).data.role == 'owner';
+      allow update: if isOwner(clubId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['clubName', 'defaultSessionPriceToman', 'publicScheduleEnabled', 'ownerPhone', 'courts', 'archivedCourts', 'updatedAt'])
+        && request.resource.data.clubName is string
+        && request.resource.data.clubName.size() > 0
+        && request.resource.data.clubName.size() <= 100
+        && request.resource.data.defaultSessionPriceToman is int
+        && request.resource.data.defaultSessionPriceToman >= 0
+        && request.resource.data.publicScheduleEnabled is bool
+        && request.resource.data.ownerPhone is string
+        && request.resource.data.ownerPhone.size() <= 30
+        && request.resource.data.courts is list
+        && request.resource.data.courts.size() <= 100
+        && request.resource.data.archivedCourts is list
+        && request.resource.data.archivedCourts.size() <= 200;
+      allow delete: if false;
+
+      // Membership role and active status are server-validated by UID, never by email.
+      match /members/{memberUid} {
+        allow get, list: if isOwner(clubId) || (signedIn() && request.auth.uid == memberUid);
+        allow create: if signedIn()
+          && request.auth.uid == memberUid
+          && request.resource.data.keys().hasOnly(['uid', 'email', 'role', 'active', 'joinedAt'])
+          && request.resource.data.uid == memberUid
+          && request.resource.data.email is string
+          && request.resource.data.email.size() <= 254
+          && request.resource.data.active == true
+          && request.resource.data.joinedAt == request.time
+          && existsAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId))
+          && getAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId)).data.active == true
+          && getAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId)).data.role == request.resource.data.role
+          && (
+            (request.resource.data.role == 'owner'
+              && existsAfter(/databases/$(database)/documents/clubs/$(clubId))
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid == memberUid)
+            || (request.resource.data.role == 'player'
+              && exists(/databases/$(database)/documents/clubs/$(clubId))
+              && existsAfter(/databases/$(database)/documents/clubInvites/$(clubId))
+              && getAfter(/databases/$(database)/documents/clubInvites/$(clubId)).data.joinEnabled == true
+              && (!('joinEnabled' in get(/databases/$(database)/documents/clubs/$(clubId)).data)
+                || get(/databases/$(database)/documents/clubs/$(clubId)).data.joinEnabled == true))
+          );
+        allow update, delete: if false;
+      }
+
+      // Per-account transaction marker: balance-changing operations read/write this document in one transaction.
+      match /accountBalanceLocks/{balanceUid} {
+        allow read: if isOwner(clubId) || (isPlayer(clubId) && request.auth.uid == balanceUid);
+        allow create: if (isOwner(clubId) || (isPlayer(clubId) && request.auth.uid == balanceUid))
+          && request.resource.data.keys().hasOnly(['uid', 'createdAt', 'updatedAt'])
+          && request.resource.data.uid == balanceUid
+          && request.resource.data.updatedAt == request.time
+          && (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time);
+        allow update: if (isOwner(clubId) || (isPlayer(clubId) && request.auth.uid == balanceUid))
+          && resource.data.uid == balanceUid
+          && request.resource.data.uid == balanceUid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt'])
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+
+      match /payments/{paymentId} {
+        allow read: if isOwner(clubId) || isOwnAccountRecord(clubId, resource.data);
+        allow create: if (
+            isPlayer(clubId)
+            && request.resource.data.keys().hasOnly(['amountToman', 'note', 'paidAt', 'status', 'createdAt', 'updatedAt', 'createdByUid', 'accountUid', 'createdByEmail', 'history'])
+            && request.resource.data.createdByUid == request.auth.uid
+            && request.resource.data.accountUid == request.auth.uid
+            && request.resource.data.createdByEmail == request.auth.token.email
+            && request.resource.data.status == 'pending'
+            && validToman(request.resource.data.amountToman)
+            && request.resource.data.note is string
+            && request.resource.data.paidAt is string
+            && request.resource.data.history is list
+            && request.resource.data.history.size() == 0
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.updatedAt == request.time
+          ) || (
+            isOwner(clubId)
+            && request.resource.data.keys().hasOnly(['bookingId', 'amountToman', 'note', 'paidAt', 'status', 'createdAt', 'updatedAt', 'createdByUid', 'accountUid', 'createdByEmail', 'history', 'reviewedByUid', 'reviewedAt'])
+            && request.resource.data.bookingId is string
+            && validToman(request.resource.data.amountToman)
+            && request.resource.data.status == 'confirmed'
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.createdByUid != request.auth.uid
+            && request.resource.data.createdByEmail is string
+            && request.resource.data.note is string
+            && request.resource.data.paidAt is string
+            && request.resource.data.history is list
+            && request.resource.data.history.size() == 0
+            && request.resource.data.reviewedByUid == request.auth.uid
+            && request.resource.data.reviewedAt == request.time
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'booked'
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.paymentLedgerId == paymentId
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.paymentReportedAmountToman == request.resource.data.amountToman
+            && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data) == request.resource.data.accountUid
+            && request.resource.data.createdByUid == request.resource.data.accountUid
+          );
+        allow update: if (
+            isOwner(clubId)
+            && resource.data.status == 'pending'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'reviewNote', 'reviewedByUid', 'reviewedAt', 'updatedAt'])
+            && request.resource.data.status in ['confirmed', 'correction_requested']
+            && request.resource.data.reviewedByUid == request.auth.uid
+            && request.resource.data.reviewNote is string
+            && request.resource.data.reviewedAt == request.time
+            && request.resource.data.updatedAt == request.time
+          ) || (
+            isOwnAccountRecord(clubId, resource.data)
+            && resource.data.status == 'correction_requested'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['amountToman', 'note', 'paidAt', 'status', 'history', 'reviewNote', 'updatedAt'])
+            && validToman(request.resource.data.amountToman)
+            && request.resource.data.note is string
+            && request.resource.data.paidAt is string
+            && request.resource.data.history is list
+            && request.resource.data.history.size() == resource.data.history.size() + 1
+            && request.resource.data.history[resource.data.history.size()].amountToman == resource.data.amountToman
+            && request.resource.data.history[resource.data.history.size()].note == resource.data.note
+            && request.resource.data.history[resource.data.history.size()].paidAt == resource.data.paidAt
+            && request.resource.data.history[resource.data.history.size()].changedByUid == request.auth.uid
+            && request.resource.data.updatedAt == request.time
+          );
+        allow delete: if false;
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if isOwner(clubId) || isOwnAccountRecord(clubId, resource.data);
+
+        // A booking only creates its planned ledger row when the reservation is atomically confirmed.
+        allow create: if (
+            isOwner(clubId)
+            && request.resource.data.keys().hasOnly([
+              'bookingId', 'date', 'priceToman', 'status', 'note', 'createdAt', 'updatedAt',
+              'createdByUid', 'accountUid', 'createdByEmail', 'reviewNote', 'reviewedByUid', 'reviewedAt'
+            ])
+            && request.resource.data.bookingId is string
+            && request.resource.data.status == 'scheduled'
+            && validNonnegativeToman(request.resource.data.priceToman)
+            && request.resource.data.date is string
+            && request.resource.data.note is string
+            && request.resource.data.createdAt == request.time
+            && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time)
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'booked'
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.sessionRecordId == sessionId
+            && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data) == request.resource.data.accountUid
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.date == request.resource.data.date
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.priceToman == request.resource.data.priceToman
+          ) || (
+            isMember(clubId)
+            && !('bookingId' in request.resource.data)
+            && request.resource.data.keys().hasOnly([
+              'date', 'priceToman', 'status', 'note', 'createdAt', 'updatedAt',
+              'createdByUid', 'accountUid', 'createdByEmail', 'reviewNote', 'reviewedByUid', 'reviewedAt'
+            ])
+            && request.resource.data.createdByUid == request.auth.uid
+            && request.resource.data.accountUid == request.auth.uid
+            && request.resource.data.createdByEmail == request.auth.token.email
+            && validNonnegativeToman(request.resource.data.priceToman)
+            && request.resource.data.status in ['attended', 'late_cancel', 'no_show', 'cancelled_on_time_pending', 'cancelled_on_time']
+            && (request.resource.data.status != 'cancelled_on_time' || isOwner(clubId))
+            && request.resource.data.date is string
+            && request.resource.data.note is string
+            && request.resource.data.note.size() <= 1000
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.updatedAt == request.time
+            && (
+              request.resource.data.status != 'cancelled_on_time'
+              || (request.resource.data.reviewedByUid == request.auth.uid
+                && request.resource.data.reviewedAt == request.time
+                && request.resource.data.reviewNote is string)
+            )
+          );
+
+        allow update: if (
+            isOwnAccountRecord(clubId, resource.data)
+            && resource.data.status == 'scheduled'
+            && resource.data.bookingId is string
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'updatedAt'])
+            && request.resource.data.status == 'cancelled_on_time_pending'
+            && request.resource.data.note is string
+            && request.resource.data.note.size() <= 1000
+            && request.resource.data.updatedAt == request.time
+            && exists(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId))
+            && accountUid(get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data) == request.auth.uid
+            && get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.status == 'booked'
+          ) || (
+            isOwnAccountRecord(clubId, resource.data)
+            && !('bookingId' in resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date', 'priceToman', 'note', 'updatedAt'])
+            && request.resource.data.status == resource.data.status
+            && validNonnegativeToman(request.resource.data.priceToman)
+            && request.resource.data.date is string
+            && request.resource.data.note is string
+            && request.resource.data.note.size() <= 1000
+            && request.resource.data.updatedAt == request.time
+          ) || (
+            isOwner(clubId)
+            && !('bookingId' in resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'date', 'priceToman', 'status', 'note', 'reviewNote', 'reviewedByUid', 'reviewedAt', 'updatedAt'
+            ])
+            && validNonnegativeToman(request.resource.data.priceToman)
+            && request.resource.data.status in ['attended', 'late_cancel', 'no_show', 'cancelled_on_time_pending', 'cancelled_on_time']
+            && request.resource.data.date is string
+            && request.resource.data.note is string
+            && request.resource.data.note.size() <= 1000
+            && request.resource.data.updatedAt == request.time
+            && (
+              request.resource.data.status == resource.data.status
+              || (request.resource.data.reviewedByUid == request.auth.uid
+                && request.resource.data.reviewedAt == request.time
+                && request.resource.data.reviewNote is string)
+            )
+          ) || (
+            isOwner(clubId)
+            && resource.data.bookingId is string
+            && request.resource.data.bookingId == resource.data.bookingId
+            && request.resource.data.createdByUid == resource.data.createdByUid
+            && request.resource.data.createdByEmail == resource.data.createdByEmail
+            && request.resource.data.date == resource.data.date
+            && request.resource.data.priceToman == resource.data.priceToman
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'note', 'reviewNote', 'reviewedByUid', 'reviewedAt', 'updatedAt'
+            ])
+            && request.resource.data.note is string
+            && request.resource.data.note.size() <= 1000
+            && request.resource.data.updatedAt == request.time
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.sessionRecordId == sessionId
+            && (
+              (request.resource.data.status == resource.data.status
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note', 'updatedAt']))
+              || (
+                request.resource.data.status in ['attended', 'no_show']
+                && resource.data.status in ['scheduled', 'cancelled_on_time_pending', 'attended', 'no_show']
+                && request.resource.data.reviewedByUid == request.auth.uid
+                && request.resource.data.reviewedAt == request.time
+                && request.resource.data.reviewNote is string
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.status == 'booked'
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.balanceHoldToman == 0
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.sessionSettledAt == request.time
+              )
+              || (
+                request.resource.data.status == 'late_cancel'
+                && resource.data.status in ['scheduled', 'cancelled_on_time_pending', 'attended', 'no_show']
+                && request.resource.data.reviewedByUid == request.auth.uid
+                && request.resource.data.reviewedAt == request.time
+                && request.resource.data.reviewNote is string
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.status == 'cancelled'
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.balanceHoldToman == 0
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.sessionSettledAt == request.time
+                && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(resource.data.bookingId))
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(resource.data.bookingId)).data.status == 'cancelled'
+                && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.lockIds[0]))
+              )
+              || (
+                request.resource.data.status == 'cancelled_on_time'
+                && resource.data.status in ['scheduled', 'cancelled_on_time_pending']
+                && request.resource.data.reviewedByUid == request.auth.uid
+                && request.resource.data.reviewedAt == request.time
+                && request.resource.data.reviewNote is string
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.status == 'cancelled'
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.balanceHoldToman == 0
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.sessionSettledAt == request.time
+                && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(resource.data.bookingId))
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(resource.data.bookingId)).data.status == 'cancelled'
+                && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.lockIds[0]))
+              )
+              || (
+                request.resource.data.status == 'cancelled_by_club'
+                && resource.data.status == 'scheduled'
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.status == 'cancelled'
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.balanceHoldToman == 0
+                && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(resource.data.bookingId))
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(resource.data.bookingId)).data.status == 'cancelled'
+                && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.lockIds[0]))
+              )
+            )
+          );
+        allow delete: if false;
+      }
+
+      // Private booking documents are visible only to the owner and their requester.
+      match /bookings/{bookingId} {
+        allow read: if isOwner(clubId) || isOwnAccountRecord(clubId, resource.data);
+
+        allow create: if request.resource.data.keys().hasOnly([
+            'date', 'startTime', 'endTime', 'courtId', 'courtName', 'sport',
+            'bookedForName', 'priceToman', 'note', 'status', 'lockIds',
+            'createdAt', 'updatedAt', 'createdByUid', 'accountUid', 'createdByEmail',
+            'phaseDeadlineAt', 'phaseDeadlineKind', 'accountBalanceAppliedToman',
+            'balanceHoldToman', 'paymentReportedAmountToman', 'paymentLedgerId', 'sessionRecordId'
+          ])
+          && request.resource.data.keys().hasAll([
+            'date', 'startTime', 'endTime', 'courtId', 'courtName', 'sport',
+            'bookedForName', 'priceToman', 'note', 'status', 'lockIds',
+            'createdAt', 'updatedAt', 'createdByUid', 'accountUid', 'createdByEmail'
+          ])
+          && validBookingCore(request.resource.data)
+          && request.resource.data.createdByUid == request.auth.uid
+          && request.resource.data.createdByEmail == request.auth.token.email
+          && request.resource.data.accountUid is string
+          && validMemberAccount(clubId, request.resource.data.accountUid)
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.date == request.resource.data.date
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.startTime == request.resource.data.startTime
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.endTime == request.resource.data.endTime
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.courtId == request.resource.data.courtId
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.status == 'booked'
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(request.resource.data.lockIds[0]))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(request.resource.data.lockIds[0])).data.bookingId == bookingId
+          && (
+            (isOwner(clubId)
+              && request.resource.data.status == 'booked'
+              && request.resource.data.priceToman == get(/databases/$(database)/documents/clubs/$(clubId)).data.defaultSessionPriceToman
+              && request.resource.data.balanceHoldToman == 0
+              && request.resource.data.accountBalanceAppliedToman == 0
+              && request.resource.data.paymentReportedAmountToman == 0
+              && request.resource.data.sessionRecordId is string
+              && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId))
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId)).data.bookingId == bookingId
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId)).data.status == 'scheduled')
+            ||
+            (isPlayer(clubId)
+              && request.resource.data.accountUid == request.auth.uid
+              && scheduleIsPublic(clubId)
+              && request.resource.data.status == 'pending'
+              && request.resource.data.priceToman == get(/databases/$(database)/documents/clubs/$(clubId)).data.defaultSessionPriceToman
+              && request.resource.data.phaseDeadlineAt is timestamp
+              && request.resource.data.phaseDeadlineAt >= request.time + duration.value(29, 'm')
+              && request.resource.data.phaseDeadlineAt <= request.time + duration.value(31, 'm')
+              && request.resource.data.phaseDeadlineKind == 'initial_review')
+          );
+
+        allow update: if (
+            isOwner(clubId)
+            && resource.data.status == 'pending'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'initialApprovedAt', 'initialApprovedByUid', 'phaseDeadlineAt', 'phaseDeadlineKind', 'updatedAt'
+            ])
+            && request.resource.data.status == 'awaiting_payment'
+            && request.resource.data.initialApprovedAt == request.time
+            && request.resource.data.initialApprovedByUid == request.auth.uid
+            && request.resource.data.phaseDeadlineAt is timestamp
+            && request.resource.data.phaseDeadlineAt >= request.time + duration.value(14, 'm')
+            && request.resource.data.phaseDeadlineAt <= request.time + duration.value(16, 'm')
+            && request.resource.data.phaseDeadlineKind == 'payment'
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.priceToman == resource.data.priceToman
+          ) || (
+            isOwner(clubId)
+            && resource.data.status == 'pending'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'rejectedAt', 'rejectedByUid', 'rejectionReason', 'balanceHoldToman', 'phaseDeadlineAt', 'phaseDeadlineKind', 'updatedAt'
+            ])
+            && request.resource.data.status == 'rejected'
+            && request.resource.data.rejectedAt == request.time
+            && request.resource.data.rejectedByUid == request.auth.uid
+            && request.resource.data.rejectionReason is string
+            && request.resource.data.rejectionReason.size() <= 500
+            && request.resource.data.balanceHoldToman == 0
+            && request.resource.data.phaseDeadlineAt == null
+            && request.resource.data.phaseDeadlineKind == null
+            && request.resource.data.updatedAt == request.time
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+          ) || (
+            isOwnAccountRecord(clubId, resource.data)
+            && resource.data.status in ['awaiting_payment', 'needs_correction']
+            && resource.data.phaseDeadlineAt is timestamp
+            && resource.data.phaseDeadlineAt > request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'paymentReportedAt', 'paymentReportedAmountToman', 'paymentNote', 'phaseDeadlineAt', 'phaseDeadlineKind', 'updatedAt'
+            ])
+            && request.resource.data.status == 'payment_submitted'
+            && request.resource.data.paymentReportedAt == request.time
+            && validNonnegativeToman(request.resource.data.paymentReportedAmountToman)
+            && request.resource.data.paymentReportedAmountToman == resource.data.priceToman - (('accountBalanceAppliedToman' in resource.data) ? resource.data.accountBalanceAppliedToman : 0)
+            && request.resource.data.paymentNote is string
+            && request.resource.data.paymentNote.size() <= 1500
+            && request.resource.data.phaseDeadlineAt == null
+            && request.resource.data.phaseDeadlineKind == null
+            && request.resource.data.updatedAt == request.time
+          ) || (
+            isOwner(clubId)
+            && resource.data.status == 'payment_submitted'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'approvedAt', 'approvedByUid', 'balanceHoldToman', 'sessionRecordId', 'paymentLedgerId',
+              'phaseDeadlineAt', 'phaseDeadlineKind', 'updatedAt'
+            ])
+            && request.resource.data.status == 'booked'
+            && request.resource.data.approvedAt == request.time
+            && request.resource.data.approvedByUid == request.auth.uid
+            && request.resource.data.balanceHoldToman == resource.data.priceToman
+            && request.resource.data.sessionRecordId is string
+            && request.resource.data.paymentReportedAmountToman is int
+            && (('accountBalanceAppliedToman' in resource.data) ? resource.data.accountBalanceAppliedToman : 0) + request.resource.data.paymentReportedAmountToman == resource.data.priceToman
+            && request.resource.data.phaseDeadlineAt == null
+            && request.resource.data.phaseDeadlineKind == null
+            && request.resource.data.updatedAt == request.time
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId)).data.bookingId == bookingId
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId)).data.status == 'scheduled'
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId)).data.priceToman == resource.data.priceToman
+            && (
+              (request.resource.data.paymentReportedAmountToman == 0 && request.resource.data.paymentLedgerId == null)
+              || (
+                request.resource.data.paymentReportedAmountToman > 0
+                && request.resource.data.paymentLedgerId is string
+                && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/payments/$(request.resource.data.paymentLedgerId))
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/payments/$(request.resource.data.paymentLedgerId)).data.bookingId == bookingId
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/payments/$(request.resource.data.paymentLedgerId)).data.status == 'confirmed'
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/payments/$(request.resource.data.paymentLedgerId)).data.amountToman == request.resource.data.paymentReportedAmountToman
+              )
+            )
+          ) || (
+            isOwner(clubId)
+            && resource.data.status == 'payment_submitted'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'correctionRequestedAt', 'correctionRequestedByUid', 'correctionNote', 'phaseDeadlineAt', 'phaseDeadlineKind', 'updatedAt'
+            ])
+            && request.resource.data.status == 'needs_correction'
+            && request.resource.data.correctionRequestedAt == request.time
+            && request.resource.data.correctionRequestedByUid == request.auth.uid
+            && request.resource.data.correctionNote is string
+            && request.resource.data.correctionNote.size() > 0
+            && request.resource.data.correctionNote.size() <= 500
+            && request.resource.data.phaseDeadlineAt is timestamp
+            && request.resource.data.phaseDeadlineAt >= request.time + duration.value(14, 'm')
+            && request.resource.data.phaseDeadlineAt <= request.time + duration.value(16, 'm')
+            && request.resource.data.phaseDeadlineKind == 'correction'
+            && request.resource.data.updatedAt == request.time
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+          ) || (
+            isOwner(clubId)
+            && resource.data.status in ['payment_submitted', 'needs_correction']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'rejectedAt', 'rejectedByUid', 'rejectionReason', 'balanceHoldToman', 'phaseDeadlineAt', 'phaseDeadlineKind', 'updatedAt'
+            ])
+            && request.resource.data.status == 'rejected'
+            && request.resource.data.rejectedAt == request.time
+            && request.resource.data.rejectedByUid == request.auth.uid
+            && request.resource.data.rejectionReason is string
+            && request.resource.data.rejectionReason.size() > 0
+            && request.resource.data.rejectionReason.size() <= 500
+            && request.resource.data.balanceHoldToman == 0
+            && request.resource.data.phaseDeadlineAt == null
+            && request.resource.data.phaseDeadlineKind == null
+            && request.resource.data.updatedAt == request.time
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+          ) || (
+            isOwner(clubId)
+            && resource.data.status == 'booked'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['balanceHoldToman', 'sessionSettledAt', 'updatedAt'])
+            && request.resource.data.balanceHoldToman == 0
+            && request.resource.data.sessionSettledAt == request.time
+            && request.resource.data.updatedAt == request.time
+            && resource.data.sessionRecordId is string
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId)).data.bookingId == bookingId
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId)).data.status in ['attended', 'no_show']
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId)).data.priceToman == resource.data.priceToman
+          ) || (
+            isOwner(clubId)
+            && resource.data.status == 'booked'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'balanceHoldToman', 'sessionSettledAt', 'updatedAt'])
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.balanceHoldToman == 0
+            && request.resource.data.sessionSettledAt == request.time
+            && request.resource.data.updatedAt == request.time
+            && resource.data.sessionRecordId is string
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId)).data.status == 'late_cancel'
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId)).data.priceToman == resource.data.priceToman
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.status == 'cancelled'
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+          ) || (
+            isOwner(clubId)
+            && resource.data.status == 'booked'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'balanceHoldToman', 'updatedAt'])
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.balanceHoldToman == 0
+            && request.resource.data.updatedAt == request.time
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.status == 'cancelled'
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+            && (
+              !('sessionRecordId' in resource.data)
+              || (
+                existsAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId))
+                && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId)).data.status == 'cancelled_by_club'
+              )
+            )
+          ) || (
+            isOwner(clubId)
+            && resource.data.status == 'booked'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'balanceHoldToman', 'sessionSettledAt', 'updatedAt'])
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.balanceHoldToman == 0
+            && request.resource.data.sessionSettledAt == request.time
+            && request.resource.data.updatedAt == request.time
+            && resource.data.sessionRecordId is string
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(resource.data.sessionRecordId)).data.status == 'cancelled_on_time'
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.status == 'cancelled'
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+          ) || (
+            (isOwner(clubId) || isOwnAccountRecord(clubId, resource.data))
+            && resource.data.status in ['pending', 'awaiting_payment', 'needs_correction']
+            && resource.data.phaseDeadlineAt is timestamp
+            && resource.data.phaseDeadlineAt <= request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'expiredAt', 'expiryReason', 'balanceHoldToman', 'phaseDeadlineAt', 'phaseDeadlineKind', 'updatedAt'
+            ])
+            && request.resource.data.status == 'expired'
+            && request.resource.data.expiredAt == request.time
+            && request.resource.data.expiryReason is string
+            && request.resource.data.balanceHoldToman == 0
+            && request.resource.data.phaseDeadlineAt == null
+            && request.resource.data.phaseDeadlineKind == null
+            && request.resource.data.updatedAt == request.time
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
+          );
+        allow delete: if false;
+      }
+
+      // Messages and payment proof belong to one private request.
+      match /bookings/{bookingId}/messages/{messageId} {
+        allow read: if isOwner(clubId)
+          || (exists(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
+            && isOwnAccountRecord(clubId, get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data));
+        allow create: if request.resource.data.keys().hasOnly([
+            'bookingId', 'body', 'senderUid', 'senderRole', 'createdAt', 'kind',
+            'attachmentPath', 'attachmentName', 'attachmentContentType', 'attachmentSize'
+          ])
+          && request.resource.data.keys().hasAll(['bookingId', 'body', 'senderUid', 'senderRole', 'createdAt'])
+          && request.resource.data.bookingId == bookingId
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 1500
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && (!('kind' in request.resource.data) || request.resource.data.kind in ['text', 'payment_report', 'status'])
+          && (!('attachmentPath' in request.resource.data) || validAttachmentMetadata(request.resource.data, clubId, bookingId))
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
+          && (
+            (isOwner(clubId) && request.resource.data.senderRole == 'owner')
+            ||
+            (isPlayer(clubId)
+              && request.resource.data.senderRole == 'player'
+              && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data) == request.auth.uid)
+          )
+          && (
+            !('kind' in request.resource.data)
+            || request.resource.data.kind != 'payment_report'
+            || (isPlayer(clubId)
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status == 'payment_submitted')
+          );
+        allow update, delete: if false;
+      }
+
+      // Public schedule only exposes the time, court and generic availability status.
+      match /publicSchedule/{bookingId} {
+        allow read: if isOwner(clubId) || (isPlayer(clubId) && scheduleIsPublic(clubId));
+        allow create: if validPublicProjection(request.resource.data)
+          && request.resource.data.status == 'booked'
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.date == request.resource.data.date
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.startTime == request.resource.data.startTime
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.endTime == request.resource.data.endTime
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.courtId == request.resource.data.courtId
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.courtName == request.resource.data.courtName
+          && (
+            (isOwner(clubId) && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status == 'booked')
+            ||
+            (isPlayer(clubId)
+              && scheduleIsPublic(clubId)
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status == 'pending'
+              && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data) == request.auth.uid)
+          );
+        allow update: if isOwner(clubId)
+          && validPublicProjection(request.resource.data)
+          && resource.data.status == 'booked'
+          && request.resource.data.status == 'cancelled'
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status == 'cancelled'
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.date == request.resource.data.date
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.startTime == request.resource.data.startTime
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.endTime == request.resource.data.endTime
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.courtId == request.resource.data.courtId;
+        allow delete: if (isOwner(clubId) || isPlayer(clubId))
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status in ['rejected', 'expired']
+          && (isOwner(clubId) || accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data) == request.auth.uid);
+      }
+
+      // Notifications are addressed to exactly one member and can be read only by that account.
+      match /notifications/{notificationId} {
+        allow read: if isMember(clubId) && resource.data.recipientUid == request.auth.uid;
+        allow create: if request.resource.data.keys().hasOnly([
+            'id', 'recipientUid', 'bookingId', 'messageId', 'type', 'title', 'body', 'createdAt', 'readAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'id', 'recipientUid', 'bookingId', 'type', 'title', 'body', 'createdAt', 'readAt'
+          ])
+          && request.resource.data.id == notificationId
+          && request.resource.data.recipientUid is string
+          && request.resource.data.bookingId is string
+          && (!('messageId' in request.resource.data)
+            || (request.resource.data.messageId is string && request.resource.data.messageId.size() <= 150))
+          && request.resource.data.type in [
+            'booking_request', 'booking_balance_applied', 'initial_approved', 'initial_rejected', 'payment_reported',
+            'payment_correction', 'booking_confirmed', 'booking_rejected', 'booking_cancelled', 'booking_expired', 'booking_message'
+          ]
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.body is string
+          && request.resource.data.body.size() <= 500
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.readAt == null
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId))
+          && (
+            (isPlayer(clubId)
+              && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data) == request.auth.uid
+              && request.resource.data.recipientUid == get(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid
+              && (
+                (request.resource.data.type == 'booking_request'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'pending')
+                || (request.resource.data.type == 'payment_reported'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'payment_submitted')
+                || (request.resource.data.type == 'booking_expired'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'expired')
+                || (request.resource.data.type == 'booking_message'
+                  && notificationHasMessage(clubId, request.resource.data, request.auth.uid, 'player'))
+              ))
+            ||
+            (isOwner(clubId)
+              && request.resource.data.recipientUid == accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data)
+              && (
+                (request.resource.data.type == 'initial_approved'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'awaiting_payment')
+                || (request.resource.data.type == 'initial_rejected'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'rejected')
+                || (request.resource.data.type == 'payment_correction'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'needs_correction')
+                || (request.resource.data.type == 'booking_confirmed'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'booked')
+                || (request.resource.data.type == 'booking_rejected'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'rejected')
+                || (request.resource.data.type == 'booking_cancelled'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'cancelled')
+                || (request.resource.data.type == 'booking_expired'
+                  && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'expired')
+                || (request.resource.data.type == 'booking_message'
+                  && notificationHasMessage(clubId, request.resource.data, request.auth.uid, 'owner'))
+              ))
+          );
+        allow update: if isMember(clubId)
+          && resource.data.recipientUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+          && (request.resource.data.readAt == request.time || request.resource.data.readAt == null);
+        allow delete: if false;
+      }
+
+      // A device push token is writable only by the account that owns it; server functions send notifications.
+      match /pushTokens/{tokenId} {
+        allow read: if isMember(clubId) && resource.data.recipientUid == request.auth.uid;
+        allow create: if isMember(clubId)
+          && request.resource.data.keys().hasOnly(['recipientUid', 'token', 'updatedAt'])
+          && request.resource.data.recipientUid == request.auth.uid
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 20
+          && request.resource.data.token.size() <= 4096
+          && request.resource.data.updatedAt == request.time;
+        allow update: if isMember(clubId)
+          && resource.data.recipientUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['token', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 20
+          && request.resource.data.token.size() <= 4096
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if isMember(clubId) && resource.data.recipientUid == request.auth.uid;
+      }
+
+      // One deterministic lock per fixed 90-minute slot prevents a second reservation or pending request.
+      match /slotLocks/{lockId} {
+        allow read: if isOwner(clubId);
+        allow create: if request.resource.data.keys().hasOnly(['bookingId', 'courtId', 'date', 'createdAt'])
+          && request.resource.data.keys().hasAll(['bookingId', 'courtId', 'date', 'createdAt'])
+          && request.resource.data.bookingId is string
+          && request.resource.data.courtId is string
+          && request.resource.data.date is string
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.courtId == request.resource.data.courtId
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.date == request.resource.data.date
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.lockIds.hasAny([lockId])
+          && (
+            (isOwner(clubId)
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'booked'
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.createdByUid == request.auth.uid)
+            ||
+            (isPlayer(clubId)
+              && scheduleIsPublic(clubId)
+              && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'pending'
+              && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data) == request.auth.uid)
+          );
+        allow update: if false;
+        allow delete: if resource.data.bookingId is string
+          && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.status in ['cancelled', 'rejected', 'expired']
+          && (isOwner(clubId) || (isPlayer(clubId)
+            && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data) == request.auth.uid));
+      }
+    }
+
+    // A code exposes only the club name and whether new membership is enabled; club settings remain private.
+    match /clubInvites/{clubId} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['clubId', 'clubName', 'joinEnabled', 'createdAt'])
+        && request.resource.data.clubId == clubId
+        && request.resource.data.clubName is string
+        && request.resource.data.clubName.size() > 0
+        && request.resource.data.clubName.size() <= 100
+        && request.resource.data.joinEnabled == true
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/clubs/$(clubId))
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.clubName == request.resource.data.clubName;
+      allow update: if isOwner(clubId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clubName', 'updatedAt'])
+        && request.resource.data.clubName is string
+        && request.resource.data.clubName.size() > 0
+        && request.resource.data.clubName.size() <= 100
+        && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.clubName == request.resource.data.clubName;
+      allow delete: if false;
+    }
+
+    match /users/{uid}/clubMemberships/{clubId} {
+      allow get, list: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['clubId', 'clubName', 'role', 'active', 'joinedAt'])
+        && request.resource.data.clubId == clubId
+        && request.resource.data.clubName is string
+        && request.resource.data.clubName.size() > 0
+        && request.resource.data.clubName.size() <= 100
+        && request.resource.data.role in ['owner', 'player']
+        && request.resource.data.active == true
+        && request.resource.data.joinedAt is timestamp
+        && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid))
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid)).data.uid == uid
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid)).data.role == request.resource.data.role
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid)).data.active == true;
+      allow delete: if false;
+    }
+  }
+}
