@@ -247,7 +247,8 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly(['amountToman', 'note', 'paidAt', 'status', 'createdAt', 'updatedAt', 'createdByUid', 'accountUid', 'createdByEmail', 'history'])
             && request.resource.data.createdByUid == request.auth.uid
             && request.resource.data.accountUid == request.auth.uid
-            && request.resource.data.createdByEmail == request.auth.token.email
+            && request.resource.data.createdByEmail is string
+            && request.resource.data.createdByEmail.size() <= 254
             && request.resource.data.status == 'pending'
             && validToman(request.resource.data.amountToman)
             && request.resource.data.note is string
@@ -341,7 +342,8 @@ service cloud.firestore {
             ])
             && request.resource.data.createdByUid == request.auth.uid
             && request.resource.data.accountUid == request.auth.uid
-            && request.resource.data.createdByEmail == request.auth.token.email
+            && request.resource.data.createdByEmail is string
+            && request.resource.data.createdByEmail.size() <= 254
             && validNonnegativeToman(request.resource.data.priceToman)
             && request.resource.data.status in ['attended', 'late_cancel', 'no_show', 'cancelled_on_time_pending', 'cancelled_on_time']
             && (request.resource.data.status != 'cancelled_on_time' || isOwner(clubId))
@@ -485,7 +487,8 @@ service cloud.firestore {
           ])
           && validBookingCore(request.resource.data)
           && request.resource.data.createdByUid == request.auth.uid
-          && request.resource.data.createdByEmail == request.auth.token.email
+          && request.resource.data.createdByEmail is string
+          && request.resource.data.createdByEmail.size() <= 254
           && request.resource.data.accountUid is string
           && validMemberAccount(clubId, request.resource.data.accountUid)
           && request.resource.data.createdAt == request.time

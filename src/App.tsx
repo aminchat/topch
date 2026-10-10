@@ -347,7 +347,7 @@ function getFriendlyError(error: unknown): string {
     return 'Firebase Storage اجازه نداد؛ ورود، مسیر رسید و ایمیل‌ها در storage.rules را بررسی کن.';
   }
   if (code === 'permission-denied' || code === 'firestore/permission-denied') {
-    return 'Firestore اجازه نداد؛ ایمیل‌ها و قواعد firestore.rules را بررسی کن.';
+    return 'Firestore اجازه نداد؛ Rules منتشرشده در Firebase Console یا شرایط لازم برای همین عملیات را بررسی کن.';
   }
   return (error as { message?: string })?.message ?? 'یک خطای پیش‌بینی‌نشده رخ داد.';
 }
@@ -512,7 +512,8 @@ function buildRecurrenceReport(
     parts.push(`${formatNumber(conflictDates.length)} تداخل برای ${details.courtName} در ساعت ${formatTimeRange(details.startTime, details.endTime)} بود و ثبت نشد: ${dates}.`);
   }
   if (failedDates.length) {
-    parts.push(`ثبت در ${formatNumber(failedDates.length)} تاریخ با خطا روبه‌رو شد: ${fatalError}`);
+    const dates = failedDates.map(formatJalaliDate).join('، ');
+    parts.push(`ثبت در ${formatNumber(failedDates.length)} تاریخ (${dates}) با خطا روبه‌رو شد: ${fatalError}`);
   }
   const notAttempted = total - succeeded - conflictDates.length - failedDates.length;
   if (fatalError && notAttempted > 0) parts.push(`${formatNumber(notAttempted)} نوبت بعدی به‌دلیل توقف سری بررسی نشد.`);
