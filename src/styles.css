@@ -50,6 +50,10 @@ a { color: inherit; }
 .profile-copy span { color: #87948f; font-size: 10px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .signout-button, .icon-button { width: 34px; height: 34px; border: 1px solid #e8eeea; display: inline-grid; place-items: center; color: #74847f; background: #fff; border-radius: 10px; transition: .18s ease; }
 .signout-button:hover, .icon-button:hover { border-color: #c8d8d0; color: var(--green); background: #f7fbf8; }
+.profile-google-link { color: #4e7b70; }
+.auth-provider-connected { display: inline-flex; align-items: center; gap: 5px; color: #347160; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.auth-link-button { gap: 6px; color: #397263; }
+.club-hub-account { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .role-switch { padding: 3px; display: flex; align-items: center; background: #f1f4f1; border: 1px solid #e8ece9; border-radius: 11px; gap: 2px; }
 .role-switch button { border: 0; color: #788681; background: transparent; border-radius: 8px; padding: 6px 11px; font-size: 10px; transition: .18s ease; white-space: nowrap; }
 .role-switch button.selected { background: #fff; color: var(--green-dark); box-shadow: 0 2px 5px rgba(15,45,37,.08); font-weight: 700; }
@@ -248,6 +252,12 @@ a { color: inherit; }
 .auth-description { margin: 0 0 24px; color: #87948e; font-size: 11px; line-height: 1.9; }
 .auth-form { display: flex; flex-direction: column; }
 .auth-form .field-label { margin-top: 13px; }
+.auth-google-button { width: 100%; min-height: 44px; margin-top: 2px; color: #344842; border-color: #dce5df; background: #fff; box-shadow: 0 2px 5px rgba(24,49,45,.04); }
+.auth-google-button:hover { background: #f9fbfa; border-color: #cbd9d1; }
+.auth-google-button:disabled { cursor: not-allowed; }
+.google-mark { width: 18px; height: 18px; flex: 0 0 auto; }
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0 1px; color: #98a29e; font-size: 9px; }
+.auth-divider::before, .auth-divider::after { content: ''; height: 1px; flex: 1; background: #e8eeea; }
 .auth-submit { width: 100%; margin-top: 18px; min-height: 44px; }
 .auth-toggle { display: flex; justify-content: center; gap: 6px; margin-top: 17px; color: #89958f; font-size: 10px; }
 .auth-toggle button { padding: 0; border: 0; color: #28725f; background: transparent; font-size: inherit; font-weight: 700; }

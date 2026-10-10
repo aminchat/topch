@@ -17,7 +17,7 @@ npm run build
 
 ## راه‌اندازی Firebase
 
-1. در [Firebase Console](https://console.firebase.google.com/) پروژه و Web App بساز؛ Authentication را با روش **Email/Password** فعال کن. هر حساب با UID خودش عضو یک یا چند باشگاه می‌شود؛ ایمیل‌های ثابت برای تعیین نقش یا دسترسی وجود ندارد.
+1. در [Firebase Console](https://console.firebase.google.com/) پروژه و Web App بساز؛ در Authentication روش‌های **Email/Password** و **Google** را فعال کن و دامنهٔ سایت را در Authorized domains اضافه کن. هر حساب با UID خودش عضو یک یا چند باشگاه می‌شود؛ ایمیل‌های ثابت برای تعیین نقش یا دسترسی وجود ندارد. اگر حساب Email/Password موجود داری و ایمیل Google همان ایمیل را دارد، ابتدا با رمز قبلی وارد شو و از حساب داخل برنامه Google را پیوند بده تا UID و عضویت‌ها حفظ شوند.
 2. Firestore Database و Storage bucket بساز و Rulesهای `firestore.rules` و `storage.rules` را بازبینی کن. داده‌های خصوصی بر پایهٔ عضویت UID و UID حساب بازیکن محدود می‌شوند؛ کد دعوت فقط نام باشگاه را پیش از عضویت نشان می‌دهد.
 3. تنظیم‌های Firebase Web App را وارد محیط انتشار یا از «تنظیم اتصال Firebase» داخل برنامه وارد کن. متغیرهای نمونه در `.env.example` هستند؛ برای انتشار محلی می‌توانی آن را به `.env.local` کپی و مقدارها را تکمیل کنی. برای Web Push، `VITE_FIREBASE_MESSAGING_SENDER_ID` الزامی است. فایل `.env.local` را در Git قرار نده.
 4. اگر ورود در دامنهٔ انتشار انجام نمی‌شود، دامنهٔ دقیق را در Authentication → Settings → Authorized domains اضافه کن. برای اعلان مرورگر، سایت باید HTTPS باشد (به‌جز `localhost`) و کاربر باید اجازهٔ اعلان بدهد.

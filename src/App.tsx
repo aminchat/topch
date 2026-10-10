@@ -20,6 +20,7 @@ import {
   Info,
   LoaderCircle,
   LogOut,
+  Link2,
   MapPin,
   MessageCircle,
   Paperclip,
@@ -37,8 +38,11 @@ import {
 } from 'lucide-react';
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  linkWithPopup,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   type User,
 } from 'firebase/auth';
@@ -314,11 +318,17 @@ function sportName(sport: SportType): string {
 
 function getFriendlyError(error: unknown): string {
   const code = (error as { code?: string })?.code ?? '';
-  if (code === 'auth/email-already-in-use') return 'این ایمیل از قبل حساب دارد؛ وارد شو.';
+  if (code === 'auth/account-exists-with-different-credential') return 'این ایمیل از قبل با روش ورود دیگری حساب دارد. با روش قبلی وارد شو و سپس Google را از حساب کاربری پیوند بده تا UID و عضویت‌ها حفظ شوند.';
+  if (code === 'auth/email-already-in-use') return 'این ایمیل از قبل حساب دارد؛ با روش ورود قبلی وارد شو.';
+  if (code === 'auth/credential-already-in-use') return 'این حساب Google به یک حساب Firebase دیگر متصل است و دو حساب به‌صورت خودکار ادغام نمی‌شوند.';
+  if (code === 'auth/provider-already-linked') return 'این روش ورود از قبل به حساب متصل است.';
+  if (code === 'auth/popup-blocked') return 'پنجرهٔ ورود Google مسدود شد؛ اجازهٔ بازشدن پنجره را بده و دوباره تلاش کن.';
+  if (code === 'auth/popup-closed-by-user') return 'پنجرهٔ ورود Google پیش از پایان بسته شد.';
+  if (code === 'auth/requires-recent-login') return 'برای تغییر روش‌های ورود، یک‌بار خارج شو و دوباره وارد شو.';
   if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') return 'ایمیل یا رمز عبور درست نیست.';
   if (code === 'auth/weak-password') return 'رمز عبور باید حداقل ۶ نویسه باشد.';
   if (code === 'auth/invalid-email') return 'فرمت ایمیل درست نیست.';
-  if (code === 'auth/operation-not-allowed') return 'روش Email/Password را در Firebase Authentication فعال کن.';
+  if (code === 'auth/operation-not-allowed') return 'روش ورود انتخاب‌شده را در Firebase Authentication فعال کن.';
   if (code === 'auth/unauthorized-domain') return 'دامنهٔ فعلی را به Authorized domains در تنظیمات Firebase Authentication اضافه کن.';
   if (code === 'auth/invalid-api-key') return 'Firebase API key نادرست است؛ تنظیمات Web App را دوباره بررسی کن.';
   if (code === 'auth/network-request-failed' || code === 'unavailable' || code === 'firestore/unavailable' || code === 'deadline-exceeded') {
@@ -952,6 +962,46 @@ function App() {
       else await signInWithEmailAndPassword(auth, normalizedEmail, password);
     } catch (error) {
       setAuthError(getFriendlyError(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    if (!auth) return;
+    setAuthBusy(true);
+    setAuthError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      setUser(result.user);
+    } catch (error) {
+      setAuthError(getFriendlyError(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleGoogleLink() {
+    const currentUser = auth?.currentUser;
+    if (!currentUser) return;
+    if (currentUser.providerData.some((provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID)) {
+      setToast('حساب Google از قبل به این حساب پیوند است.');
+      return;
+    }
+    setAuthBusy(true);
+    setClubHubError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await linkWithPopup(currentUser, provider);
+      setUser(result.user);
+      setToast('حساب Google پیوند شد؛ شناسه و عضویت‌های باشگاه حفظ شدند.');
+    } catch (error) {
+      const message = getFriendlyError(error);
+      setClubHubError(message);
+      setToast(message);
     } finally {
       setAuthBusy(false);
     }
@@ -2509,6 +2559,7 @@ function App() {
     return (
       <AuthScreen
         onSubmit={handleAuthSubmit}
+        onGoogleSignIn={handleGoogleSignIn}
         busy={authBusy}
         error={authError}
         onSetup={() => setModal({ type: 'firebase' })}
@@ -2530,6 +2581,9 @@ function App() {
         activeClubId={activeMembership?.clubId ?? ''}
         busy={clubHubBusy}
         error={clubHubError}
+        googleLinked={user.providerData.some((provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID)}
+        linkBusy={authBusy}
+        onLinkGoogle={handleGoogleLink}
         onSignOut={handleSignOut}
         onSelect={activateClub}
         onCreate={createClubFromHub}
@@ -2571,6 +2625,9 @@ function App() {
         dataLoading={dataLoading}
         dataError={dataError}
         onSignOut={isDemo ? undefined : handleSignOut}
+        onLinkGoogle={isDemo ? undefined : handleGoogleLink}
+        googleLinked={Boolean(user?.providerData.some((provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID))}
+        linkBusy={authBusy}
         onDemoRoleChange={setDemoRole}
         notifications={userNotifications}
         browserNotificationPermission={browserNotificationPermission}
@@ -2917,6 +2974,9 @@ function Header({
   dataLoading,
   dataError,
   onSignOut,
+  onLinkGoogle,
+  googleLinked = false,
+  linkBusy = false,
   onDemoRoleChange,
   notifications,
   browserNotificationPermission,
@@ -2934,6 +2994,9 @@ function Header({
   dataLoading: boolean;
   dataError: string;
   onSignOut?: () => void;
+  onLinkGoogle?: () => void;
+  googleLinked?: boolean;
+  linkBusy?: boolean;
   onDemoRoleChange: (role: UserRole) => void;
   notifications: AppNotificationRecord[];
   browserNotificationPermission: string;
@@ -3011,6 +3074,7 @@ function Header({
             <div className="profile-menu">
               <div className="profile-avatar"><UserRound size={17} /></div>
               <div className="profile-copy"><strong>{role === 'owner' ? 'صاحب باشگاه' : 'بازیکن'}</strong><span dir="ltr">{email}</span></div>
+              {!googleLinked && onLinkGoogle && <button className="signout-button profile-google-link" onClick={onLinkGoogle} disabled={linkBusy} title="پیوند Google به همین حساب" aria-label="پیوند حساب Google">{linkBusy ? <LoaderCircle className="spin" size={16} /> : <Link2 size={16} />}</button>}
               <button className="signout-button" onClick={onSignOut} title="خروج" aria-label="خروج"><LogOut size={17} /></button>
             </div>
           )}
@@ -3160,8 +3224,20 @@ function StatusBadge({ status }: { status: PaymentStatus }) {
   return <span className={`status-badge payment-${status}`}><Icon size={13} />{PAYMENT_STATUS_LABEL[status]}</span>;
 }
 
+function GoogleMark() {
+  return (
+    <svg className="google-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path fill="#4285F4" d="M43.6 24.5c0-1.5-.1-2.9-.4-4.3H24v8.1h11.1c-.5 2.6-2 4.8-4.3 6.3v5.3h6.9c4-3.7 6.3-9.1 6.3-15.4z" />
+      <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.9-5.3c-1.9 1.3-4.2 2.1-6.6 2.1-5.1 0-9.4-3.4-10.9-8H6v5.4C9.4 39.7 16.2 44 24 44z" />
+      <path fill="#FBBC05" d="M13.1 27.9c-.4-1.2-.7-2.5-.7-3.9s.3-2.7.7-3.9v-5.4H6C4.7 17.3 4 20.5 4 24s.7 6.7 2 9.3l7.1-5.4z" />
+      <path fill="#EA4335" d="M24 12.1c3 0 5.7 1 7.8 3l5.8-5.8C34.1 6.1 29.5 4 24 4 16.2 4 9.4 8.3 6 14.7l7.1 5.4c1.5-4.6 5.8-8 10.9-8z" />
+    </svg>
+  );
+}
+
 function AuthScreen({
   onSubmit,
+  onGoogleSignIn,
   busy,
   error,
   onSetup,
@@ -3169,6 +3245,7 @@ function AuthScreen({
   onCloseModal,
 }: {
   onSubmit: (email: string, password: string, createAccount: boolean) => Promise<void>;
+  onGoogleSignIn: () => Promise<void>;
   busy: boolean;
   error: string;
   onSetup: () => void;
@@ -3204,10 +3281,15 @@ function AuthScreen({
           <div className="auth-mobile-brand"><CircleDot size={24} /> سانس‌یار</div>
           <span className="section-kicker">دفتر حساب مشترک</span>
           <h2>{createAccount ? 'ساخت حساب' : 'خوش برگشتی'}</h2>
-          <p className="auth-description">با ایمیل و رمز عبور وارد شو؛ سپس باشگاه بساز یا با کد عضویت بگیر.</p>
+          <p className="auth-description">با حساب Google یا ایمیل و رمز عبور وارد شو؛ سپس باشگاه بساز یا با کد عضویت بگیر.</p>
           {isSetupIncomplete && (
             <div className="auth-setup-notice"><Info size={17} /><span>اتصال Firebase کامل نیست.</span><button onClick={onSetup}>تنظیم اتصال</button></div>
           )}
+          <button type="button" className="button auth-google-button" onClick={() => void onGoogleSignIn()} disabled={busy || isSetupIncomplete}>
+            {busy ? <LoaderCircle className="spin" size={18} /> : <GoogleMark />}
+            {busy ? 'در حال اتصال…' : 'ادامه با Google'}
+          </button>
+          <div className="auth-divider"><span>یا با ایمیل و رمز عبور</span></div>
           <form onSubmit={submit} className="auth-form">
             <label className="field-label">ایمیل</label>
             <input className="text-input" type="email" dir="ltr" autoComplete="email" placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} />
@@ -3236,12 +3318,15 @@ function LockKeyholeIcon() {
   return <ShieldCheck size={16} />;
 }
 
-function ClubHub({ email, memberships, activeClubId, busy, error, onSignOut, onSelect, onCreate, onJoin, onClose }: {
+function ClubHub({ email, memberships, activeClubId, busy, error, googleLinked, linkBusy, onLinkGoogle, onSignOut, onSelect, onCreate, onJoin, onClose }: {
   email: string;
   memberships: ClubMembershipRecord[];
   activeClubId: string;
   busy: boolean;
   error: string;
+  googleLinked: boolean;
+  linkBusy: boolean;
+  onLinkGoogle: () => void;
   onSignOut: () => void;
   onSelect: (clubId: string) => void;
   onCreate: (name: string) => Promise<void>;
@@ -3276,7 +3361,7 @@ function ClubHub({ email, memberships, activeClubId, busy, error, onSignOut, onS
     <div className="club-hub-page" dir="rtl">
       <header className="club-hub-topbar">
         <div className="brand-lockup"><div className="brand-mark"><CircleDot size={25} /></div><div><strong>سانس‌یار</strong><span>فضای باشگاه‌های شما</span></div></div>
-        <div className="club-hub-account"><span dir="ltr">{email}</span>{onClose && <button className="button button-quiet" onClick={onClose}>بازگشت به باشگاه</button>}<button className="signout-button" onClick={onSignOut} aria-label="خروج" title="خروج"><LogOut size={17} /></button></div>
+        <div className="club-hub-account"><span dir="ltr">{email}</span>{googleLinked ? <span className="auth-provider-connected"><CheckCircle2 size={14} /> Google متصل</span> : <button className="button button-quiet auth-link-button" onClick={onLinkGoogle} disabled={linkBusy}><Link2 size={15} />{linkBusy ? 'در حال اتصال…' : 'پیوند Google'}</button>}{onClose && <button className="button button-quiet" onClick={onClose}>بازگشت به باشگاه</button>}<button className="signout-button" onClick={onSignOut} aria-label="خروج" title="خروج"><LogOut size={17} /></button></div>
       </header>
       <main className="club-hub-content">
         <section className="club-hub-heading"><span className="section-kicker">عضویت بر اساس حساب کاربری</span><h1>{memberships.length ? 'باشگاه فعال را انتخاب کن' : 'به یک باشگاه بپیوند یا باشگاهت را بساز'}</h1><p>حساب شما می‌تواند عضو هر تعداد باشگاه باشد. گردش مالی و رزروهای هر باشگاه مستقل نگهداری می‌شود.</p></section>
@@ -3361,7 +3446,7 @@ function FirebaseSetupModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="setup-access-note"><ShieldCheck size={17} /><span>فهرست باشگاه‌ها، نقش‌ها و سطح دسترسی از عضویت UID و قواعد منتشرشدهٔ Firestore/Storage کنترل می‌شود؛ ایمیل‌های ثابت در تنظیمات لازم نیست.</span></div>
         {error && <div className="form-error"><CircleAlert size={16} />{error}</div>}
-        <div className="setup-footer-note"><ShieldCheck size={16} /><span>قبل از ورود، Email/Password را فعال و Rules چندباشگاهی را منتشر کن؛ برای ارسال رسید، Storage bucket و `storage.rules` نیز لازم است.</span></div>
+        <div className="setup-footer-note"><ShieldCheck size={16} /><span>روش‌های ورود موردنیاز (Email/Password یا Google) را در Firebase فعال و Rules چندباشگاهی را منتشر کن؛ برای ارسال رسید، Storage bucket و `storage.rules` نیز لازم است.</span></div>
         <div className="modal-actions">
           <a className="button button-quiet console-link" href="https://console.firebase.google.com/" target="_blank" rel="noreferrer">باز کردن Firebase Console</a>
           <button type="button" className="button button-secondary" onClick={onClose}>فعلاً نه</button>
