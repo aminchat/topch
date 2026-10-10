@@ -59,7 +59,9 @@ firebase deploy --only hosting,firestore:rules,storage,functions
 
 فایل `.github/workflows/deploy-pages.yml` نسخهٔ وب را از شاخهٔ `arena/f832e3ee-topch` می‌سازد و روی Pages منتشر می‌کند. پس از push، در GitHub برو به **Settings → Pages** و گزینهٔ **GitHub Actions** را به‌عنوان Source انتخاب کن. آدرس پروژه با تنظیم فعلی معمولاً `https://aminchat.github.io/topch/` خواهد بود.
 
-در **Settings → Secrets and variables → Actions → Variables** متغیرهای `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID` و `VITE_FIREBASE_STORAGE_BUCKET` را وارد کن؛ `VITE_FIREBASE_VAPID_KEY` برای Web Push اختیاری است. در Firebase Authentication دامنهٔ `aminchat.github.io` را به Authorized domains اضافه کن. بدون تنظیم Web App، Pages در حالت نمایشی محلی بالا می‌آید و دادهٔ Firebase ذخیره نمی‌کند. Rules و Functions را جداگانه با Firebase CLI منتشر کن.
+در **Settings → Secrets and variables → Actions → Variables** متغیرهای `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID` و `VITE_FIREBASE_STORAGE_BUCKET` را وارد کن؛ `VITE_FIREBASE_VAPID_KEY` برای Web Push اختیاری است. در Firebase Authentication دامنهٔ `aminchat.github.io` را به Authorized domains اضافه کن. بدون تنظیم Web App، Pages در حالت نمایشی محلی بالا می‌آید و دادهٔ Firebase ذخیره نمی‌کند. Rules را جداگانه با Firebase CLI منتشر کن.
+
+برای deploy کردن callable سری هفتگی بدون کامپیوتر محلی، workflow فایل `.github/workflows/deploy-recurring-function.yml` پس از push تغییرات Functions روی شاخهٔ `arena/f832e3ee-topch` اجرا می‌شود. در GitHub به **Settings → Secrets and variables → Actions → New repository secret** برو و JSON حساب سرویس Google Cloud با مجوز deploy را با نام `FIREBASE_SERVICE_ACCOUNT` ثبت کن؛ آن را داخل Git نگذار و در چت نفرست. workflow شناسهٔ پروژه را از متغیر `VITE_FIREBASE_PROJECT_ID` می‌خواند. اگر workflow پیش از تنظیم secret اجرا شده باشد، پس از تنظیم آن از **Actions → Deploy recurring booking function → Re-run jobs** دوباره اجرا کن. در صورت نبودن تنظیم‌ها، خلاصهٔ اجرا در Actions می‌گوید چه چیزی کم است.
 
 ## رفتار رزرو
 
