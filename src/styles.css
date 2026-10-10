@@ -691,7 +691,52 @@ a { color: inherit; }
 .archived-court-row strong { color: #52685d; font-size: 10px; }
 .archived-court-row small { color: #94a098; font-size: 8px; }
 
-.notification-control { position: relative; z-index: 15; }
+/* Public club directory and booking-only guest flow */
+.club-hub-page, .guest-booking-shell { min-height: 100vh; background: linear-gradient(180deg, #f8fbf8 0, #f4f8f5 100%); }
+.club-hub-topbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px max(22px, calc((100vw - 1050px) / 2)); background: rgba(255,255,255,.94); border-bottom: 1px solid #e7eeea; }
+.club-hub-topbar > .brand-lockup { flex: 0 0 auto; }
+.club-hub-account { justify-content: flex-end; color: #708078; font-size: 10px; }
+.club-hub-content { width: min(1050px, calc(100% - 44px)); margin: 0 auto; padding: 30px 0 32px; }
+.club-hub-heading { max-width: 740px; margin-bottom: 22px; }
+.club-hub-heading h1 { margin: 4px 0; color: #19352f; font-size: clamp(23px, 4vw, 30px); line-height: 1.45; letter-spacing: -.5px; }
+.club-hub-heading p { margin: 5px 0 0; color: #83918b; font-size: 11px; line-height: 1.9; }
+.club-hub-memberships, .club-hub-directory-list { display: grid; gap: 9px; }
+.club-hub-memberships { margin-bottom: 18px; }
+.club-hub-membership, .club-directory-card { min-width: 0; display: flex; align-items: center; gap: 11px; padding: 11px 12px; background: #fff; border: 1px solid #e6ede8; border-radius: 12px; box-shadow: 0 3px 11px rgba(24,49,45,.025); }
+.club-hub-membership.is-active { border-color: #bcdac9; box-shadow: 0 0 0 2px rgba(52,132,94,.06); }
+.club-hub-membership-icon { width: 37px; height: 37px; flex: 0 0 auto; display: grid; place-items: center; color: #398064; background: #edf6ef; border-radius: 11px; }
+.club-hub-membership-copy, .club-directory-card-copy { display: flex; flex: 1 1 auto; min-width: 0; flex-direction: column; gap: 3px; }
+.club-hub-membership-copy strong, .club-directory-card-copy strong { overflow: hidden; color: #334f43; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.club-hub-membership-copy span, .club-directory-card-copy span { color: #899790; font-size: 9px; line-height: 1.7; }
+.club-hub-membership-copy code { color: #61786b; font-size: 8px; }
+.club-hub-copy { padding: 5px 8px; color: #617b6d; background: #f7faf7; border: 1px solid #e4ece5; border-radius: 7px; font-size: 8px; }
+.club-hub-directory { margin: 20px 0; padding: 17px; background: #fff; border: 1px solid #e5ece7; border-radius: 15px; box-shadow: 0 6px 20px rgba(24,49,45,.035); }
+.club-hub-directory-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 12px; color: #47816a; }
+.club-hub-directory-heading h2 { margin: 3px 0; color: #2e493d; font-size: 15px; }
+.club-hub-directory-heading p { margin: 3px 0 0; color: #89968f; font-size: 9px; line-height: 1.8; }
+.club-hub-directory-heading > svg { flex: 0 0 auto; width: 38px; height: 38px; padding: 9px; background: #f0f7f1; border-radius: 11px; }
+.club-hub-directory-empty { min-height: 94px; padding: 16px; background: #fafcf9; border: 1px dashed #dce8de; border-radius: 10px; }
+.club-directory-card { min-height: 61px; }
+.club-directory-card .button { flex: 0 0 auto; }
+.club-hub-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.club-hub-card { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 18px; background: #fff; border: 1px solid #e5ece7; border-radius: 14px; box-shadow: 0 4px 14px rgba(24,49,45,.025); }
+.club-hub-card-icon { width: 37px; height: 37px; display: grid; place-items: center; margin-bottom: 12px; color: #347b62; background: #edf6ef; border-radius: 11px; }
+.club-hub-card h2 { margin: 4px 0; color: #304b3f; font-size: 14px; }
+.club-hub-card p { min-height: 37px; margin: 2px 0 13px; color: #89968f; font-size: 9px; line-height: 1.8; }
+.club-hub-card .field-label { width: 100%; }
+.club-hub-card .button { margin-top: 10px; }
+.club-hub-error { margin-top: 14px; }
+.club-hub-security { display: flex; align-items: flex-start; gap: 9px; margin-top: 17px; padding: 11px 13px; color: #678074; background: #eff6f0; border: 1px solid #e0ebe1; border-radius: 10px; font-size: 9px; line-height: 1.8; }
+.club-hub-security svg { flex: 0 0 auto; margin-top: 1px; color: #528064; }
+.guest-booking-shell .topbar-inner { width: min(1050px, calc(100% - 44px)); }
+.guest-user-email { max-width: 220px; overflow: hidden; color: #819088; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.guest-booking-intro { align-items: center; }
+.guest-booking-intro .eyebrow-dot { background: #3d9b73; }
+.guest-price-badge { display: inline-flex; align-items: center; min-height: 33px; padding: 6px 10px; color: #36745d; background: #eff7f0; border: 1px solid #dfede1; border-radius: 9px; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.guest-directory-notice { margin: 0 0 13px; }
+.guest-booking-shell .page-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; padding: 12px 2px; color: #9aa69f; border-top: 1px solid #e7ede8; font-size: 8px; }
+
+.notification-control {  position: relative; z-index: 15; }
 .notification-bell { position: relative; width: 38px; height: 38px; display: grid; place-items: center; color: #55746a; background: #f4f7f4; border: 1px solid #e5ece6; border-radius: 11px; cursor: pointer; }
 .notification-bell:hover { color: #216d58; background: #edf5ef; }
 .notification-count { position: absolute; top: -5px; inset-inline-end: -5px; min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 4px; color: #fff; background: #c25b49; border: 2px solid #fff; border-radius: 10px; font-size: 8px; font-weight: 800; }
@@ -721,4 +766,21 @@ a { color: inherit; }
   .booking-archive-screen-item > .button { align-self: flex-start; }
   .booking-archive-item { align-items: flex-start; }
   .notification-popover { inset-inline-end: -46px; }
+  .club-hub-topbar { align-items: flex-start; flex-direction: column; padding: 13px 18px; }
+  .club-hub-account { width: 100%; justify-content: flex-start; }
+  .club-hub-content { width: calc(100% - 30px); padding-top: 22px; }
+  .club-hub-membership, .club-directory-card { align-items: flex-start; flex-wrap: wrap; }
+  .club-hub-membership-copy, .club-directory-card-copy { flex-basis: calc(100% - 50px); }
+  .club-hub-membership .button, .club-directory-card .button { margin-inline-start: 48px; }
+  .club-hub-copy { margin-inline-start: auto; }
+  .club-hub-directory { padding: 13px; }
+  .club-hub-actions { grid-template-columns: 1fr; }
+  .club-hub-card p { min-height: 0; }
+  .guest-booking-shell .topbar-inner { width: calc(100% - 30px); gap: 9px; }
+  .guest-booking-shell .topbar { height: auto; min-height: 69px; padding: 9px 0; }
+  .guest-booking-shell .topbar-right { gap: 7px; }
+  .guest-booking-shell .topbar-right .button { min-height: 34px; padding: 0 9px; font-size: 9px; }
+  .guest-user-email { max-width: 105px; }
+  .guest-booking-intro { align-items: flex-start; flex-direction: column; }
+  .guest-booking-shell .page-footer { flex-direction: column; }
 }

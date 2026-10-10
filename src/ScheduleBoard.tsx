@@ -67,6 +67,8 @@ export function ScheduleBoard({
   onReviewBooking,
   onSettings,
   onCancel,
+  canRequest = true,
+  showContactInfo = true,
 }: {
   role: UserRole;
   settings: ClubSettings;
@@ -85,6 +87,8 @@ export function ScheduleBoard({
   onReviewBooking: (booking: BookingRecord) => void;
   onSettings: () => void;
   onCancel: (booking: BookingRecord) => void;
+  canRequest?: boolean;
+  showContactInfo?: boolean;
 }) {
   const [collapsedCourtIds, setCollapsedCourtIds] = useState<Set<string>>(() => new Set());
   const [showArchive, setShowArchive] = useState(false);
@@ -162,12 +166,12 @@ export function ScheduleBoard({
       {role === 'owner' && (
         <div className={`schedule-visibility ${settings.publicScheduleEnabled ? 'is-public' : 'is-private'}`}>
           {settings.publicScheduleEnabled ? <Eye size={17} /> : <EyeOff size={17} />}
-          <span>{settings.publicScheduleEnabled ? 'نمایش برنامه برای بازیکنان فعال است.' : 'برنامه فقط برای صاحب باشگاه قابل مشاهده است.'}</span>
+          <span>{settings.publicScheduleEnabled ? 'باشگاه و برنامهٔ رزرو در فهرست عمومی نمایش داده می‌شوند.' : 'باشگاه و برنامه فقط برای اعضای مجاز قابل مشاهده‌اند.'}</span>
           <button className="text-button" onClick={onSettings}>تغییر</button>
         </div>
       )}
 
-      {role === 'player' && (
+      {role === 'player' && showContactInfo && (
         <div className="player-contact-strip">
           <div className="player-contact-copy"><strong>نیاز به پیگیری درخواست داری؟</strong><span>از گفت‌وگوی خصوصی برنامه استفاده کن یا با صاحب باشگاه تماس بگیر.</span></div>
           {settings.ownerPhone.trim() ? (
@@ -288,7 +292,7 @@ export function ScheduleBoard({
                               <button className="slot-reserve-button" onClick={() => onCreate({ date: selectedDate, courtId: court.id, startTime: slot.startTime, endTime: slot.endTime })}>
                                 <CheckCircle2 size={14} /> ثبت رزرو این سانس
                               </button>
-                            ) : !entry ? (
+                            ) : !entry && canRequest ? (
                               <button className="slot-request-button" onClick={() => onRequest({ date: selectedDate, courtId: court.id, startTime: slot.startTime, endTime: slot.endTime })}>
                                 <MessageCircle size={14} /> درخواست این سانس
                               </button>

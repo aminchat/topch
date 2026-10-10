@@ -153,6 +153,15 @@ type BookingInput = {
 };
 
 type BookingDraft = Pick<BookingInput, 'date' | 'courtId' | 'startTime' | 'endTime'>;
+type PublicClubListing = {
+  clubId: string;
+  clubName: string;
+  ownerUid: string;
+  publicScheduleEnabled: boolean;
+  defaultSessionPriceToman: number;
+  courts: CourtInfo[];
+};
+type RecentGuestClub = Omit<PublicClubListing, 'publicScheduleEnabled'>;
 
 const ActiveClubIdContext = createContext(DEMO_CLUB_ID);
 
@@ -518,9 +527,17 @@ function App() {
   const [memberships, setMemberships] = useState<ClubMembershipRecord[]>([]);
   const [membershipsResolved, setMembershipsResolved] = useState(!firebaseReady);
   const [activeClubId, setActiveClubId] = useState('');
+  const [guestClubId, setGuestClubId] = useState('');
+  const [guestClubFallback, setGuestClubFallback] = useState<PublicClubListing | RecentGuestClub | null>(null);
   const [showClubHub, setShowClubHub] = useState(false);
   const [clubHubBusy, setClubHubBusy] = useState(false);
   const [clubHubError, setClubHubError] = useState('');
+  const [publicClubs, setPublicClubs] = useState<PublicClubListing[]>([]);
+  const [publicClubsLoading, setPublicClubsLoading] = useState(false);
+  const [publicClubsError, setPublicClubsError] = useState('');
+  const [recentGuestHistory, setRecentGuestHistory] = useState<{ uid: string; clubs: RecentGuestClub[] }>({ uid: '', clubs: [] });
+  const [guestClubLoading, setGuestClubLoading] = useState(false);
+  const [guestClubError, setGuestClubError] = useState('');
   const [remoteClubMembers, setRemoteClubMembers] = useState<ClubMembershipRecord[]>([]);
   const [remotePayments, setRemotePayments] = useState<PaymentRecord[]>([]);
   const [remoteSessions, setRemoteSessions] = useState<SessionRecord[]>([]);
@@ -549,9 +566,10 @@ function App() {
 
   const isDemo = !firebaseReady;
   const activeMembership = memberships.find((membership) => membership.clubId === activeClubId && membership.active);
-  const clubId = isDemo ? DEMO_CLUB_ID : activeMembership?.clubId ?? '';
-  const currentRole: UserRole = isDemo ? demoRole : activeMembership?.role ?? 'player';
-  const isAllowedUser = isDemo || Boolean(user && activeMembership);
+  const guestMode = !isDemo && Boolean(user && guestClubId) && activeMembership?.clubId !== guestClubId;
+  const clubId = isDemo ? DEMO_CLUB_ID : guestMode ? guestClubId : activeMembership?.clubId ?? '';
+  const currentRole: UserRole = isDemo ? demoRole : guestMode ? 'player' : activeMembership?.role ?? 'player';
+  const isAllowedUser = isDemo || Boolean(user && activeMembership && !guestMode);
   const payments = isDemo
     ? currentRole === 'owner' ? demoData.payments : demoData.payments.filter((payment) => (payment.accountUid || payment.createdByUid) === 'demo-player')
     : remotePayments;
@@ -576,6 +594,10 @@ function App() {
   const userNotifications = isDemo
     ? demoData.notifications.filter((item) => item.recipientUid === (currentRole === 'owner' ? 'demo-owner' : 'demo-player'))
     : remoteNotifications;
+  const recentGuestClubs = user && recentGuestHistory.uid === user.uid ? recentGuestHistory.clubs : [];
+  const activeBooking = modal?.type === 'bookingConversation' || modal?.type === 'bookingReview'
+    ? bookings.find((booking) => booking.id === modal.booking.id) ?? modal.booking
+    : undefined;
 
   useEffect(() => {
     if (!isDemo) return;
@@ -674,6 +696,8 @@ function App() {
         setUser(nextUser);
         setMemberships([]);
         setActiveClubId('');
+        setGuestClubId('');
+        setGuestClubFallback(null);
         setShowClubHub(false);
         setMembershipsResolved(!nextUser);
         setClubHubError('');
@@ -686,6 +710,53 @@ function App() {
       },
     );
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setRecentGuestHistory({ uid: '', clubs: [] });
+      return;
+    }
+    const key = `sansyar-guest-bookings-${user.uid}`;
+    try {
+      const saved: unknown = JSON.parse(window.localStorage.getItem(key) ?? '[]');
+      const clubs: RecentGuestClub[] = [];
+      if (Array.isArray(saved)) {
+        for (const item of saved) {
+          if (!item || typeof item !== 'object') continue;
+          const record = item as Record<string, unknown>;
+          if (typeof record.clubId !== 'string' || !record.clubId || record.clubId.length > 150 || record.clubId.includes('/')) continue;
+          if (typeof record.clubName !== 'string' || !record.clubName) continue;
+          if (typeof record.ownerUid !== 'string' || !record.ownerUid) continue;
+          const defaultSessionPriceToman = Number(record.defaultSessionPriceToman);
+          if (!Number.isFinite(defaultSessionPriceToman) || defaultSessionPriceToman < 0) continue;
+          const courts: CourtInfo[] = [];
+          if (Array.isArray(record.courts)) {
+            for (const court of record.courts) {
+              if (!court || typeof court !== 'object') continue;
+              const value = court as Record<string, unknown>;
+              if (typeof value.id !== 'string' || !value.id || value.id.length > 100 || value.id.includes('/')) continue;
+              if (typeof value.name !== 'string' || !value.name) continue;
+              courts.push({ id: value.id, name: value.name.slice(0, 100) });
+            }
+          }
+          clubs.push({ clubId: record.clubId, clubName: record.clubName.slice(0, 100), ownerUid: record.ownerUid, defaultSessionPriceToman, courts });
+          if (clubs.length >= 20) break;
+        }
+      }
+      setRecentGuestHistory({ uid: user.uid, clubs });
+    } catch {
+      setRecentGuestHistory({ uid: user.uid, clubs: [] });
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user || recentGuestHistory.uid !== user.uid) return;
+    try {
+      window.localStorage.setItem(`sansyar-guest-bookings-${user.uid}`, JSON.stringify(recentGuestHistory.clubs));
+    } catch {
+      // Recent guest links are a convenience; booking records remain secured in Firestore.
+    }
+  }, [user?.uid, recentGuestHistory]);
 
   useEffect(() => {
     if (isDemo) {
@@ -725,6 +796,100 @@ function App() {
       setClubHubError(getFriendlyError(error));
     });
   }, [isDemo, user?.uid]);
+
+  useEffect(() => {
+    if (isDemo || !db || !user || guestMode || (activeMembership && !showClubHub)) {
+      setPublicClubs([]);
+      setPublicClubsLoading(false);
+      setPublicClubsError('');
+      return;
+    }
+    setPublicClubsLoading(true);
+    setPublicClubsError('');
+    const directoryQuery = query(collection(db, 'publicClubs'), where('publicScheduleEnabled', '==', true));
+    return onSnapshot(directoryQuery, (snapshot) => {
+      const next = snapshot.docs.map((item): PublicClubListing => {
+        const data = item.data();
+        const courts = Array.isArray(data.courts)
+          ? data.courts.filter((court: unknown) => Boolean(court && typeof court === 'object' && 'id' in court && 'name' in court))
+            .map((court: { id: string; name: string }) => ({ id: String(court.id), name: String(court.name) }))
+          : [];
+        return {
+          clubId: item.id,
+          clubName: String(data.clubName ?? 'باشگاه'),
+          ownerUid: String(data.ownerUid ?? ''),
+          publicScheduleEnabled: data.publicScheduleEnabled === true,
+          defaultSessionPriceToman: Number(data.defaultSessionPriceToman ?? 0),
+          courts,
+        };
+      }).filter((club) => club.publicScheduleEnabled && club.ownerUid && club.courts.length > 0)
+        .sort((a, b) => a.clubName.localeCompare(b.clubName, 'fa'));
+      setPublicClubs(next);
+      setPublicClubsLoading(false);
+    }, (error) => {
+      setPublicClubsError(getFriendlyError(error));
+      setPublicClubsLoading(false);
+    });
+  }, [isDemo, user?.uid, guestMode, activeMembership?.clubId, showClubHub]);
+
+  useEffect(() => {
+    if (isDemo || !db || !user || !guestMode || !guestClubId) {
+      setGuestClubLoading(false);
+      setGuestClubError('');
+      return;
+    }
+    const fallback = guestClubFallback?.clubId === guestClubId ? guestClubFallback : null;
+    const applyFallback = () => {
+      if (!fallback) {
+        setGuestClubError('اطلاعات عمومی این باشگاه پیدا نشد؛ از فهرست عمومی دوباره وارد شو.');
+        setGuestClubLoading(false);
+        return;
+      }
+      setRemoteSettings({
+        clubName: fallback.clubName,
+        defaultSessionPriceToman: fallback.defaultSessionPriceToman,
+        publicScheduleEnabled: false,
+        ownerPhone: '',
+        courts: fallback.courts,
+        archivedCourts: [],
+        ownerUid: fallback.ownerUid,
+      });
+      setGuestClubError('این باشگاه دیگر رزرو عمومی نمی‌پذیرد؛ درخواست‌های قبلی همچنان در دسترس‌اند.');
+      setGuestClubLoading(false);
+    };
+    setGuestClubLoading(true);
+    setGuestClubError('');
+    const publicClubRef = doc(db, 'publicClubs', guestClubId);
+    return onSnapshot(publicClubRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        applyFallback();
+        return;
+      }
+      const data = snapshot.data();
+      const courts = Array.isArray(data.courts)
+        ? data.courts.filter((court: unknown) => Boolean(court && typeof court === 'object' && 'id' in court && 'name' in court))
+          .map((court: { id: string; name: string }) => ({ id: String(court.id), name: String(court.name) }))
+        : [];
+      const isPublic = data.publicScheduleEnabled === true;
+      setRemoteSettings({
+        clubName: String(data.clubName ?? fallback?.clubName ?? 'باشگاه'),
+        defaultSessionPriceToman: Number(data.defaultSessionPriceToman ?? fallback?.defaultSessionPriceToman ?? 0),
+        publicScheduleEnabled: isPublic,
+        ownerPhone: '',
+        courts: courts.length ? courts : fallback?.courts ?? [],
+        archivedCourts: [],
+        ownerUid: typeof data.ownerUid === 'string' ? data.ownerUid : fallback?.ownerUid ?? '',
+      });
+      if (!isPublic) setGuestClubError('این باشگاه دیگر رزرو عمومی نمی‌پذیرد؛ درخواست‌های قبلی همچنان در دسترس‌اند.');
+      setGuestClubLoading(false);
+    }, (error) => {
+      if (fallback) applyFallback();
+      else {
+        setGuestClubError(getFriendlyError(error));
+        setGuestClubLoading(false);
+      }
+    });
+  }, [isDemo, user?.uid, guestMode, guestClubId, guestClubFallback]);
 
   useEffect(() => {
     if (isDemo || !firebaseReady || !db || !user || !isAllowedUser || !clubId) {
@@ -844,7 +1009,7 @@ function App() {
       setScheduleError('');
       return;
     }
-    if (!firebaseReady || !db || !user || !isAllowedUser || !clubId) {
+    if (!firebaseReady || !db || !user || (!isAllowedUser && !guestMode) || !clubId) {
       setScheduleLoading(false);
       return;
     }
@@ -884,7 +1049,9 @@ function App() {
     const bookingsCollection = collection(firestore, 'clubs', clubId, 'bookings');
     const bookingsQuery = currentRole === 'owner'
       ? query(bookingsCollection, orderBy('createdAt', 'desc'))
-      : query(bookingsCollection, or(where('accountUid', '==', userUid), where('createdByUid', '==', userUid)));
+      : guestMode
+        ? query(bookingsCollection, where('createdByUid', '==', userUid))
+        : query(bookingsCollection, or(where('accountUid', '==', userUid), where('createdByUid', '==', userUid)));
     const unlistenBookings = onSnapshot(
       bookingsQuery,
       (snapshot) => {
@@ -901,7 +1068,7 @@ function App() {
       unlistenPublic?.();
       unlistenBookings();
     };
-  }, [isDemo, user?.uid, isAllowedUser, currentRole, remoteSettings.publicScheduleEnabled, scheduleDate, clubId]);
+  }, [isDemo, user?.uid, isAllowedUser, guestMode, currentRole, remoteSettings.publicScheduleEnabled, scheduleDate, clubId]);
 
   useEffect(() => {
     const requestedId = new URLSearchParams(window.location.search).get('booking');
@@ -1017,10 +1184,61 @@ function App() {
   }
 
   function activateClub(nextClubId: string) {
+    setGuestClubId('');
+    setGuestClubFallback(null);
+    setGuestClubError('');
     setActiveClubId(nextClubId);
     setShowClubHub(false);
     setClubHubError('');
     if (user && nextClubId) window.localStorage.setItem(`sansyar-active-club-${user.uid}`, nextClubId);
+  }
+
+  function openPublicClub(clubIdToOpen: string, knownClub?: PublicClubListing | RecentGuestClub) {
+    const member = memberships.find((item) => item.clubId === clubIdToOpen && item.active);
+    if (member) {
+      activateClub(clubIdToOpen);
+      return;
+    }
+    setModal(null);
+    setRemoteSettings(DEFAULT_SETTINGS);
+    setRemoteBookings([]);
+    setRemotePublicSchedule([]);
+    setRemotePayments([]);
+    setRemoteSessions([]);
+    setScheduleDate(todayISO());
+    setGuestClubError('');
+    setGuestClubLoading(true);
+    setGuestClubFallback(knownClub?.clubId === clubIdToOpen ? knownClub : null);
+    setGuestClubId(clubIdToOpen);
+  }
+
+  function backToClubHub() {
+    setGuestClubId('');
+    setGuestClubFallback(null);
+    setGuestClubLoading(false);
+    setGuestClubError('');
+    setRemoteSettings(DEFAULT_SETTINGS);
+    setRemoteBookings([]);
+    setRemotePublicSchedule([]);
+    setRemotePayments([]);
+    setRemoteSessions([]);
+    setModal(null);
+    setShowClubHub(Boolean(activeMembership));
+  }
+
+  function rememberGuestBookingClub() {
+    if (!user || !guestMode || !clubId) return;
+    setRecentGuestHistory((current) => {
+      const previous = current.uid === user.uid ? current.clubs : [];
+      const clubs: RecentGuestClub[] = [{
+        clubId,
+        clubName: settings.clubName,
+        ownerUid: settings.ownerUid ?? '',
+        defaultSessionPriceToman: settings.defaultSessionPriceToman,
+        courts: settings.courts.map((court) => ({ id: court.id, name: court.name })),
+      }, ...previous.filter((club) => club.clubId !== clubId)].slice(0, 20);
+      return { uid: user.uid, clubs };
+    });
   }
 
   async function createClubFromHub(name: string) {
@@ -1035,6 +1253,7 @@ function App() {
     try {
       const clubRef = doc(collection(db, 'clubs'));
       const inviteRef = doc(db, 'clubInvites', clubRef.id);
+      const publicRef = doc(db, 'publicClubs', clubRef.id);
       const memberRef = doc(db, 'clubs', clubRef.id, 'members', user.uid);
       const indexRef = doc(db, 'users', user.uid, 'clubMemberships', clubRef.id);
       const joinedAt = serverTimestamp();
@@ -1077,6 +1296,15 @@ function App() {
         clubName: cleanName,
         joinEnabled: true,
         createdAt: joinedAt,
+      });
+      batch.set(publicRef, {
+        clubName: cleanName,
+        ownerUid: user.uid,
+        publicScheduleEnabled: false,
+        defaultSessionPriceToman: 0,
+        courts: DEFAULT_SETTINGS.courts,
+        createdAt: joinedAt,
+        updatedAt: joinedAt,
       });
       await batch.commit();
       setMemberships((current) => [membership, ...current.filter((item) => item.clubId !== membership.clubId)]);
@@ -1782,6 +2010,11 @@ function App() {
   }
 
   async function submitBookingRequest(draft: BookingDraft, input: RequestFormInput) {
+    if (guestMode && !settings.publicScheduleEnabled) {
+      setModal(null);
+      setToast('این باشگاه در حال حاضر درخواست رزرو عمومی جدید نمی‌پذیرد.');
+      return;
+    }
     const bookedForName = input.bookedForName.trim();
     const message = input.message.trim();
     if (!bookedForName) {
@@ -1859,6 +2092,7 @@ function App() {
         return;
       }
       const id = await createRemoteBookingRequest(firestore, clubId, signedInUser.uid, signedInUser.email ?? '', settings.ownerUid, details, message);
+      rememberGuestBookingClub();
       const booking: BookingRecord = {
         id,
         ...details,
@@ -2397,7 +2631,7 @@ function App() {
     const notificationRef = doc(firestore, 'clubs', clubId, 'notifications', notification.id);
     try {
       await runTransaction(firestore, async (transaction) => {
-        await transaction.get(balanceLockRef);
+        if (!guestMode) await transaction.get(balanceLockRef);
         const snapshot = await transaction.get(bookingRef);
         if (!snapshot.exists()) return;
         const data = snapshot.data();
@@ -2417,7 +2651,7 @@ function App() {
           updatedAt: serverTimestamp(),
         });
         transaction.set(notificationRef, { ...notification, createdAt: serverTimestamp(), readAt: null });
-        transaction.set(balanceLockRef, { uid: String(data.accountUid || data.createdByUid || booking.accountUid || booking.createdByUid), updatedAt: serverTimestamp() }, { merge: true });
+        if (!guestMode) transaction.set(balanceLockRef, { uid: String(data.accountUid || data.createdByUid || booking.accountUid || booking.createdByUid), updatedAt: serverTimestamp() }, { merge: true });
       });
     } catch (error) {
       setToast(getFriendlyError(error));
@@ -2527,10 +2761,12 @@ function App() {
     try {
       const clubRef = doc(db, 'clubs', clubId);
       const inviteRef = doc(db, 'clubInvites', clubId);
+      const publicRef = doc(db, 'publicClubs', clubId);
       await runTransaction(db, async (transaction) => {
-        const [clubSnapshot, inviteSnapshot] = await Promise.all([
+        const [clubSnapshot, inviteSnapshot, publicSnapshot] = await Promise.all([
           transaction.get(clubRef),
           transaction.get(inviteRef),
+          transaction.get(publicRef),
         ]);
         if (!clubSnapshot.exists() || !inviteSnapshot.exists()) throw new Error('اطلاعات باشگاه یا کد عضویت پیدا نشد.');
         transaction.update(clubRef, {
@@ -2542,7 +2778,23 @@ function App() {
           archivedCourts: input.archivedCourts,
           updatedAt: serverTimestamp(),
         });
-        transaction.update(inviteRef, { clubName: input.clubName, updatedAt: serverTimestamp() });
+        const inviteData = inviteSnapshot.data();
+        transaction.set(inviteRef, {
+          clubId,
+          clubName: input.clubName,
+          joinEnabled: inviteData.joinEnabled === true,
+          createdAt: inviteData.createdAt,
+          updatedAt: serverTimestamp(),
+        });
+        transaction.set(publicRef, {
+          clubName: input.clubName,
+          ownerUid: settings.ownerUid ?? user.uid,
+          publicScheduleEnabled: input.publicScheduleEnabled,
+          defaultSessionPriceToman: input.defaultSessionPriceToman,
+          courts: input.courts,
+          ...(!publicSnapshot.exists() ? { createdAt: serverTimestamp() } : {}),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
       });
       setModal(null);
       setToast('تنظیمات حساب ذخیره شد.');
@@ -2573,12 +2825,49 @@ function App() {
     return <FullScreenLoader label="در حال دریافت عضویت‌های باشگاه…" />;
   }
 
+  if (!isDemo && user && guestMode) {
+    return (
+      <GuestBookingPage
+        clubId={clubId}
+        email={user.email ?? ''}
+        userUid={user.uid}
+        settings={settings}
+        bookings={bookings}
+        publicSchedule={publicSchedule}
+        selectedDate={scheduleDate}
+        onSelectDate={setScheduleDate}
+        now={clockNow}
+        loading={guestClubLoading || scheduleLoading}
+        error={scheduleError}
+        notice={guestClubError}
+        busy={bookingSaving}
+        requestDraft={modal?.type === 'requestBooking' ? modal : undefined}
+        activeBooking={modal?.type === 'bookingConversation' ? activeBooking : undefined}
+        firestore={db}
+        storage={storage}
+        toast={toast}
+        onBack={backToClubHub}
+        onRequest={(draft) => setModal({ type: 'requestBooking', ...draft })}
+        onOpenConversation={(booking) => setModal({ type: 'bookingConversation', booking })}
+        onCloseModal={() => setModal(null)}
+        onSubmitRequest={(draft, input) => void submitBookingRequest(draft, input)}
+        onSendMessage={(booking, body) => void sendBookingMessage(booking, body)}
+        onSubmitPayment={(booking, body, file) => void submitBookingPayment(booking, body, file)}
+      />
+    );
+  }
+
   if (!isDemo && user && (!activeMembership || showClubHub)) {
     return (
       <ClubHub
         email={user.email ?? ''}
         memberships={memberships}
         activeClubId={activeMembership?.clubId ?? ''}
+        publicClubs={publicClubs}
+        recentGuestClubs={recentGuestClubs}
+        publicClubsLoading={publicClubsLoading}
+        publicClubsError={publicClubsError}
+        onBookPublicClub={openPublicClub}
         busy={clubHubBusy}
         error={clubHubError}
         googleLinked={user.providerData.some((provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID)}
@@ -2606,9 +2895,6 @@ function App() {
     : tab === 'sessions'
       ? activityItems.filter((item) => item.kind === 'session')
       : activityItems;
-  const activeBooking = modal?.type === 'bookingConversation' || modal?.type === 'bookingReview'
-    ? bookings.find((booking) => booking.id === modal.booking.id) ?? modal.booking
-    : undefined;
 
   return (
     <ActiveClubIdContext.Provider value={clubId}>
@@ -3318,10 +3604,114 @@ function LockKeyholeIcon() {
   return <ShieldCheck size={16} />;
 }
 
-function ClubHub({ email, memberships, activeClubId, busy, error, googleLinked, linkBusy, onLinkGoogle, onSignOut, onSelect, onCreate, onJoin, onClose }: {
+function GuestBookingPage({ clubId, email, userUid, settings, bookings, publicSchedule, selectedDate, onSelectDate, now, loading, error, notice, busy, requestDraft, activeBooking, firestore, storage, toast, onBack, onRequest, onOpenConversation, onCloseModal, onSubmitRequest, onSendMessage, onSubmitPayment }: {
+  clubId: string;
+  email: string;
+  userUid: string;
+  settings: ClubSettings;
+  bookings: BookingRecord[];
+  publicSchedule: PublicScheduleRecord[];
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
+  now: number;
+  loading: boolean;
+  error: string;
+  notice: string;
+  busy: boolean;
+  requestDraft?: BookingDraft;
+  activeBooking?: BookingRecord;
+  firestore: Firestore | null;
+  storage: FirebaseStorage | null;
+  toast: string;
+  onBack: () => void;
+  onRequest: (draft: BookingDraft) => void;
+  onOpenConversation: (booking: BookingRecord) => void;
+  onCloseModal: () => void;
+  onSubmitRequest: (draft: BookingDraft, input: RequestFormInput) => void;
+  onSendMessage: (booking: BookingRecord, body: string) => void;
+  onSubmitPayment: (booking: BookingRecord, body: string, file: File | null) => void;
+}) {
+  return (
+    <ActiveClubIdContext.Provider value={clubId}>
+      <div className="app-shell guest-booking-shell" dir="rtl">
+        <header className="topbar">
+          <div className="topbar-inner">
+            <div className="brand-lockup"><div className="brand-mark"><CircleDot size={25} /></div><div><strong>سانس‌یار</strong><span>رزرو سانس بدون عضویت</span></div></div>
+            <div className="topbar-right"><span className="guest-user-email" dir="ltr">{email}</span><button className="button button-secondary" onClick={onBack}>بازگشت به باشگاه‌ها</button></div>
+          </div>
+        </header>
+        <main className="page-wrap">
+          <section className="page-intro guest-booking-intro">
+            <div><div className="eyebrow"><span className="eyebrow-dot" /> رزرو عمومی</div><h1>{settings.clubName}</h1><p>سانس آزاد را انتخاب و درخواست را برای بررسی مالک بفرست؛ عضویت دائمی لازم نیست.</p></div>
+            <div className="intro-actions"><span className="guest-price-badge">{settings.defaultSessionPriceToman > 0 ? `${formatToman(settings.defaultSessionPriceToman)} هر سانس` : 'نرخ رایگان یا اعلام‌نشده'}</span></div>
+          </section>
+          {notice && <div className="booking-flow-notice guest-directory-notice"><Info size={16} /><span>{notice}</span></div>}
+          {loading ? <div className="list-loading"><LoaderCircle className="spin" size={22} /><span>در حال دریافت برنامهٔ عمومی…</span></div>
+            : settings.courts.length === 0 ? <div className="empty-state"><strong>برای این باشگاه زمین فعالی نمایش داده نمی‌شود</strong><span>اگر درخواست قبلی داری، باشگاه‌ها را باز کن و دوباره وارد همین فهرست شو.</span></div>
+              : <ScheduleBoard
+                role="player"
+                settings={settings}
+                bookings={bookings}
+                publicSchedule={publicSchedule}
+                selectedDate={selectedDate}
+                onSelectDate={onSelectDate}
+                now={now}
+                loading={false}
+                error={error}
+                report=""
+                onDismissReport={() => undefined}
+                onCreate={() => undefined}
+                onRequest={onRequest}
+                onOpenConversation={onOpenConversation}
+                onReviewBooking={() => undefined}
+                onSettings={() => undefined}
+                onCancel={() => undefined}
+                canRequest={settings.publicScheduleEnabled}
+                showContactInfo={false}
+              />}
+          <footer className="page-footer"><span>سانس‌یار · رزرو مهمان</span><span>نام و وضعیت درخواست فقط برای صاحب باشگاه و حساب خودت نمایش داده می‌شود.</span></footer>
+        </main>
+        {requestDraft && <RequestBookingModal
+          draft={requestDraft}
+          courts={settings.courts}
+          defaultPrice={settings.defaultSessionPriceToman}
+          busy={busy}
+          onClose={onCloseModal}
+          onSubmit={(input) => onSubmitRequest(requestDraft, input)}
+        />}
+        {activeBooking && <BookingConversationModal
+          booking={activeBooking}
+          role="player"
+          demo={false}
+          isArchived={false}
+          userUid={userUid}
+          ownerPhone=""
+          demoMessages={[]}
+          firestore={firestore}
+          storage={storage}
+          busy={busy}
+          now={now}
+          availableBalanceToman={0}
+          onClose={onCloseModal}
+          onSend={(body) => onSendMessage(activeBooking, body)}
+          onApplyBalance={() => undefined}
+          onSubmitPayment={(body, file) => onSubmitPayment(activeBooking, body, file)}
+        />}
+        {toast && <div className="toast"><CheckCircle2 size={18} /><span>{toast}</span></div>}
+      </div>
+    </ActiveClubIdContext.Provider>
+  );
+}
+
+function ClubHub({ email, memberships, activeClubId, publicClubs, recentGuestClubs, publicClubsLoading, publicClubsError, onBookPublicClub, busy, error, googleLinked, linkBusy, onLinkGoogle, onSignOut, onSelect, onCreate, onJoin, onClose }: {
   email: string;
   memberships: ClubMembershipRecord[];
   activeClubId: string;
+  publicClubs: PublicClubListing[];
+  recentGuestClubs: RecentGuestClub[];
+  publicClubsLoading: boolean;
+  publicClubsError: string;
+  onBookPublicClub: (clubId: string, knownClub?: PublicClubListing | RecentGuestClub) => void;
   busy: boolean;
   error: string;
   googleLinked: boolean;
@@ -3336,6 +3726,7 @@ function ClubHub({ email, memberships, activeClubId, busy, error, googleLinked, 
   const [clubName, setClubName] = useState('');
   const [clubCode, setClubCode] = useState('');
   const [copiedCode, setCopiedCode] = useState(false);
+  const clubsWithPreviousRequests = recentGuestClubs.filter((recent) => !publicClubs.some((club) => club.clubId === recent.clubId));
 
   function submitCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3364,7 +3755,7 @@ function ClubHub({ email, memberships, activeClubId, busy, error, googleLinked, 
         <div className="club-hub-account"><span dir="ltr">{email}</span>{googleLinked ? <span className="auth-provider-connected"><CheckCircle2 size={14} /> Google متصل</span> : <button className="button button-quiet auth-link-button" onClick={onLinkGoogle} disabled={linkBusy}><Link2 size={15} />{linkBusy ? 'در حال اتصال…' : 'پیوند Google'}</button>}{onClose && <button className="button button-quiet" onClick={onClose}>بازگشت به باشگاه</button>}<button className="signout-button" onClick={onSignOut} aria-label="خروج" title="خروج"><LogOut size={17} /></button></div>
       </header>
       <main className="club-hub-content">
-        <section className="club-hub-heading"><span className="section-kicker">عضویت بر اساس حساب کاربری</span><h1>{memberships.length ? 'باشگاه فعال را انتخاب کن' : 'به یک باشگاه بپیوند یا باشگاهت را بساز'}</h1><p>حساب شما می‌تواند عضو هر تعداد باشگاه باشد. گردش مالی و رزروهای هر باشگاه مستقل نگهداری می‌شود.</p></section>
+        <section className="club-hub-heading"><span className="section-kicker">رزرو و حساب باشگاه</span><h1>{memberships.length ? 'باشگاه یا سانس را انتخاب کن' : 'رزرو سانس یا ساخت باشگاه'}</h1><p>برای درخواست یک سانس، عضویت لازم نیست. عضویت با کد فقط برای دسترسی دائمی به دفتر حساب و امکانات اعضاست.</p></section>
         {memberships.length > 0 && <section className="club-hub-memberships" aria-label="باشگاه‌های عضو‌شده">
           {memberships.map((membership) => <article className={`club-hub-membership ${membership.clubId === activeClubId ? 'is-active' : ''}`} key={membership.clubId}>
             <div className="club-hub-membership-icon"><CircleDot size={20} /></div>
@@ -3373,20 +3764,39 @@ function ClubHub({ email, memberships, activeClubId, busy, error, googleLinked, 
             {membership.role === 'owner' && <button className="club-hub-copy" onClick={() => void copyCode(membership.clubId)}>{copiedCode ? 'کپی شد' : 'کپی کد دعوت'}</button>}
           </article>)}
         </section>}
+        <section className="club-hub-directory" aria-label="باشگاه‌های دارای رزرو عمومی">
+          <div className="club-hub-directory-heading"><div><span className="section-kicker">رزرو بدون عضویت</span><h2>باشگاه‌های قابل انتخاب</h2><p>باشگاه را انتخاب کن، سانس آزاد را ببین و درخواست رزرو بفرست.</p></div><CalendarDays size={21} /></div>
+          {publicClubsLoading ? <div className="list-loading"><LoaderCircle className="spin" size={20} /><span>در حال دریافت فهرست باشگاه‌ها…</span></div>
+            : publicClubsError ? <div className="form-error"><CircleAlert size={15} />{publicClubsError}</div>
+              : publicClubs.length === 0 ? <div className="empty-state club-hub-directory-empty"><strong>فعلاً باشگاه عمومی‌ای پیدا نشد</strong><span>باشگاه وقتی در این فهرست می‌آید که مالک «نمایش عمومی باشگاه و برنامهٔ رزرو» را روشن کند.</span></div>
+                : <div className="club-hub-directory-list">{publicClubs.map((club) => <article className="club-directory-card" key={club.clubId}>
+                  <div className="club-hub-membership-icon"><CircleDot size={20} /></div>
+                  <div className="club-directory-card-copy"><strong>{club.clubName}</strong><span>{formatNumber(club.courts.length)} زمین · {club.defaultSessionPriceToman > 0 ? `${formatToman(club.defaultSessionPriceToman)} هر سانس` : 'نرخ رایگان یا اعلام‌نشده'}</span></div>
+                  <button className="button button-primary" disabled={busy} onClick={() => onBookPublicClub(club.clubId, club)}><CalendarDays size={15} /> دیدن سانس‌ها</button>
+                </article>)}</div>}
+        </section>
+        {clubsWithPreviousRequests.length > 0 && <section className="club-hub-directory club-hub-history" aria-label="باشگاه‌های رزرو شدهٔ قبلی">
+          <div className="club-hub-directory-heading"><div><span className="section-kicker">پیگیری رزرو</span><h2>باشگاه‌های درخواست‌شدهٔ قبلی</h2><p>اگر نمایش عمومی باشگاه خاموش شده، از اینجا می‌توانی وضعیت درخواست قبلی را ببینی.</p></div><History size={21} /></div>
+          <div className="club-hub-directory-list">{clubsWithPreviousRequests.map((club) => <article className="club-directory-card" key={club.clubId}>
+            <div className="club-hub-membership-icon"><History size={18} /></div>
+            <div className="club-directory-card-copy"><strong>{club.clubName}</strong><span>نمایش سانس‌های قبلی و گفت‌وگوی رزرو</span></div>
+            <button className="button button-secondary" disabled={busy} onClick={() => onBookPublicClub(club.clubId, club)}><MessageCircle size={15} /> پیگیری درخواست</button>
+          </article>)}</div>
+        </section>}
         <section className="club-hub-actions">
           <form className="club-hub-card" onSubmit={submitCreate}>
-            <div className="club-hub-card-icon"><Plus size={20} /></div><span className="section-kicker">برای مالک یا مدیر</span><h2>ساخت باشگاه جدید</h2><p>باشگاه جدید شناسهٔ عضویت منحصربه‌فرد می‌گیرد؛ بعد می‌توانی کدش را با اعضا به‌اشتراک بگذاری.</p>
+            <div className="club-hub-card-icon"><Plus size={20} /></div><span className="section-kicker">برای مالک یا مدیر</span><h2>ساخت باشگاه جدید</h2><p>باشگاه بساز و تنظیم کن کدام اطلاعات و برنامه برای بازیکنانِ بدون عضویت نمایش داده شود.</p>
             <label className="field-label" htmlFor="new-club-name">نام باشگاه</label><input id="new-club-name" className="text-input" maxLength={100} required value={clubName} onChange={(event) => setClubName(event.target.value)} placeholder="مثلاً باشگاه محلهٔ ما" />
             <button className="button button-primary" disabled={busy || !clubName.trim()}>{busy ? <LoaderCircle className="spin" size={17} /> : <Plus size={17} />}{busy ? 'در حال ساخت…' : 'ساخت و ورود به باشگاه'}</button>
           </form>
           <form className="club-hub-card" onSubmit={submitJoin}>
-            <div className="club-hub-card-icon"><UserRound size={20} /></div><span className="section-kicker">برای بازیکن یا مالک</span><h2>عضویت با کد باشگاه</h2><p>برای پیوستن، کد دعوت را از مالک بگیر. باشگاه نسخهٔ قبلی باید ابتدا دسترسی UIDمحور و کد دعوت داشته باشد.</p>
+            <div className="club-hub-card-icon"><UserRound size={20} /></div><span className="section-kicker">اختیاری · برای عضویت دائمی</span><h2>پیوستن با کد باشگاه</h2><p>برای رزرو یک سانس از فهرست عمومی استفاده کن؛ این کد فقط برای عضویت و دسترسی مداوم به امکانات باشگاه است.</p>
             <label className="field-label" htmlFor="club-join-code">کد عضویت</label><input id="club-join-code" className="text-input" dir="ltr" autoComplete="off" value={clubCode} onChange={(event) => setClubCode(event.target.value)} placeholder="شناسهٔ باشگاه" />
             <button className="button button-secondary" disabled={busy || !clubCode.trim()}>{busy ? <LoaderCircle className="spin" size={17} /> : <UserRound size={17} />}{busy ? 'در حال بررسی…' : 'عضویت / انتخاب باشگاه'}</button>
           </form>
         </section>
         {error && <div className="form-error club-hub-error"><CircleAlert size={16} />{error}</div>}
-        <div className="club-hub-security"><ShieldCheck size={17} /><span>دسترسی و داده‌ها در Firestore بر اساس UID و عضویت همان باشگاه کنترل می‌شوند؛ ایمیل به‌تنهایی نقش مالک یا بازیکن را تعیین نمی‌کند.</span></div>
+        <div className="club-hub-security"><ShieldCheck size={17} /><span>درخواست رزرو بدون عضویت فقط به نام حساب خودت ثبت می‌شود؛ اطلاعات خصوصی باشگاه و دفتر حساب همچنان فقط برای اعضای مجاز است.</span></div>
       </main>
     </div>
   );
@@ -3997,7 +4407,7 @@ function SettingsModal({ settings, actorUid, onClose, onSubmit }: { settings: Cl
       <form className="modal-form" onSubmit={submit}>
         <div className="form-field"><label className="field-label" htmlFor="club-name">نام باشگاه</label><input id="club-name" className="text-input" value={clubName} onChange={(event) => setClubName(event.target.value)} /></div>
         <div className="form-field"><label className="field-label" htmlFor="default-price">نرخ از پیش تعیین‌شدهٔ هر سانس <span>تومان</span></label><input id="default-price" className="text-input" dir="ltr" inputMode="numeric" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="۰" /><small className="field-helper">{value > 0 ? formatToman(value) : 'مبلغ صفر به‌عنوان سانس رایگان نمایش داده می‌شود.'}</small></div>
-        <div className="form-field"><label className="field-label" htmlFor="owner-phone">شمارهٔ تماس صاحب باشگاه</label><input id="owner-phone" className="text-input" type="tel" dir="ltr" value={ownerPhone} onChange={(event) => setOwnerPhone(event.target.value)} placeholder="مثلاً ‎+98 912 000 0000" /><small className="field-helper">این شماره برای بازیکنانِ مجاز به مشاهدهٔ برنامه نمایش داده می‌شود تا بتوانند تماس بگیرند.</small></div>
+        <div className="form-field"><label className="field-label" htmlFor="owner-phone">شمارهٔ تماس صاحب باشگاه</label><input id="owner-phone" className="text-input" type="tel" dir="ltr" value={ownerPhone} onChange={(event) => setOwnerPhone(event.target.value)} placeholder="مثلاً ‎+98 912 000 0000" /><small className="field-helper">این شماره فقط در بخش اعضای باشگاه نمایش داده می‌شود؛ فهرست رزرو عمومی آن را منتشر نمی‌کند.</small></div>
         <div className="settings-section-title"><MapPin size={17} /><strong>زمین‌های فعال</strong></div>
         <div className="court-editor-list">
           {courts.map((court, index) => (
@@ -4019,7 +4429,7 @@ function SettingsModal({ settings, actorUid, onClose, onSubmit }: { settings: Cl
         <label className={`schedule-toggle ${publicScheduleEnabled ? 'is-enabled' : ''}`}>
           <input type="checkbox" checked={publicScheduleEnabled} onChange={(event) => setPublicScheduleEnabled(event.target.checked)} />
           <span className="schedule-toggle-icon">{publicScheduleEnabled ? <Eye size={19} /> : <EyeOff size={19} />}</span>
-          <span className="schedule-toggle-copy"><strong>نمایش برنامه برای بازیکنان</strong><small>این تنظیم برای کل باشگاه است؛ برنامه به افراد یا سانس‌های خاص محدود نمی‌شود.</small></span>
+          <span className="schedule-toggle-copy"><strong>نمایش عمومی باشگاه و برنامهٔ رزرو</strong><small>با روشن‌بودن این گزینه، نام باشگاه، زمین‌ها، نرخ و سانس‌ها در فهرست عمومیِ بازیکنانِ واردشده دیده می‌شود؛ عضویت برای درخواست یک سانس لازم نیست.</small></span>
           <span className="toggle-switch" aria-hidden="true" />
         </label>
         <div className="settings-policy"><ShieldCheck size={17} /><span>بازیکن فقط زمان، زمین، مبلغ سانس آزاد و آزاد یا رزرو بودن را می‌بیند؛ جزئیات رزروهای دیگران خصوصی می‌ماند. بایگانی زمین، رزروها و گفت‌وگوهای قبلی را حذف نمی‌کند.</span></div>

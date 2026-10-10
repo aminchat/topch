@@ -30,9 +30,13 @@ service firebase.storage {
 
     function isRequester(clubId, bookingId) {
       let booking = bookingData(clubId, bookingId);
-      return isPlayer(clubId)
-        && (('accountUid' in booking && booking.accountUid == request.auth.uid)
-          || (!('accountUid' in booking) && booking.createdByUid == request.auth.uid));
+      return (isPlayer(clubId)
+          && (('accountUid' in booking && booking.accountUid == request.auth.uid)
+            || (!('accountUid' in booking) && booking.createdByUid == request.auth.uid)))
+        || (signedIn()
+          && booking.createdByUid == request.auth.uid
+          && ('accountUid' in booking)
+          && booking.accountUid == request.auth.uid);
     }
 
     function validReceiptFile(fileName) {
@@ -40,7 +44,7 @@ service firebase.storage {
     }
 
     match /clubs/{clubId}/bookings/{bookingId}/{fileName} {
-      // Receipts are private to the club owner and the booking's member account UID.
+      // Receipts are private to the club owner and the authenticated booking requester.
       allow read: if isOwner(clubId) || isRequester(clubId, bookingId);
 
       allow create, update: if isRequester(clubId, bookingId)

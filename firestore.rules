@@ -38,6 +38,17 @@ service cloud.firestore {
           || data.createdByUid == request.auth.uid);
     }
 
+    function isBookingCreator(data) {
+      return signedIn() && data.createdByUid == request.auth.uid;
+    }
+
+    function isBookingPlayer(clubId, data) {
+      return isOwnAccountRecord(clubId, data)
+        || (signedIn()
+          && data.createdByUid == request.auth.uid
+          && accountUid(data) == request.auth.uid);
+    }
+
     function validMemberAccount(clubId, uid) {
       return uid == request.auth.uid
         || (exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(uid))
@@ -458,7 +469,7 @@ service cloud.firestore {
 
       // Private booking documents are visible only to the owner and their requester.
       match /bookings/{bookingId} {
-        allow read: if isOwner(clubId) || isOwnAccountRecord(clubId, resource.data);
+        allow read: if isOwner(clubId) || isOwnAccountRecord(clubId, resource.data) || isBookingCreator(resource.data);
 
         allow create: if request.resource.data.keys().hasOnly([
             'date', 'startTime', 'endTime', 'courtId', 'courtName', 'sport',
@@ -499,7 +510,7 @@ service cloud.firestore {
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId)).data.bookingId == bookingId
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)/sessions/$(request.resource.data.sessionRecordId)).data.status == 'scheduled')
             ||
-            (isPlayer(clubId)
+            (isBookingPlayer(clubId, request.resource.data)
               && request.resource.data.accountUid == request.auth.uid
               && scheduleIsPublic(clubId)
               && request.resource.data.status == 'pending'
@@ -543,7 +554,7 @@ service cloud.firestore {
             && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId))
             && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
           ) || (
-            isOwnAccountRecord(clubId, resource.data)
+            isBookingPlayer(clubId, resource.data)
             && resource.data.status in ['awaiting_payment', 'needs_correction']
             && resource.data.phaseDeadlineAt is timestamp
             && resource.data.phaseDeadlineAt > request.time
@@ -691,7 +702,7 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/clubs/$(clubId)/publicSchedule/$(bookingId)).data.status == 'cancelled'
             && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/slotLocks/$(resource.data.lockIds[0]))
           ) || (
-            (isOwner(clubId) || isOwnAccountRecord(clubId, resource.data))
+            (isOwner(clubId) || isBookingPlayer(clubId, resource.data))
             && resource.data.status in ['pending', 'awaiting_payment', 'needs_correction']
             && resource.data.phaseDeadlineAt is timestamp
             && resource.data.phaseDeadlineAt <= request.time
@@ -715,7 +726,7 @@ service cloud.firestore {
       match /bookings/{bookingId}/messages/{messageId} {
         allow read: if isOwner(clubId)
           || (exists(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
-            && isOwnAccountRecord(clubId, get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data));
+            && isBookingPlayer(clubId, get(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data));
         allow create: if request.resource.data.keys().hasOnly([
             'bookingId', 'body', 'senderUid', 'senderRole', 'createdAt', 'kind',
             'attachmentPath', 'attachmentName', 'attachmentContentType', 'attachmentSize'
@@ -733,14 +744,14 @@ service cloud.firestore {
           && (
             (isOwner(clubId) && request.resource.data.senderRole == 'owner')
             ||
-            (isPlayer(clubId)
+            (isBookingPlayer(clubId, getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data)
               && request.resource.data.senderRole == 'player'
               && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data) == request.auth.uid)
           )
           && (
             !('kind' in request.resource.data)
             || request.resource.data.kind != 'payment_report'
-            || (isPlayer(clubId)
+            || (isBookingPlayer(clubId, getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data)
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status == 'payment_submitted')
           );
         allow update, delete: if false;
@@ -748,7 +759,7 @@ service cloud.firestore {
 
       // Public schedule only exposes the time, court and generic availability status.
       match /publicSchedule/{bookingId} {
-        allow read: if isOwner(clubId) || (isPlayer(clubId) && scheduleIsPublic(clubId));
+        allow read: if isOwner(clubId) || (signedIn() && scheduleIsPublic(clubId));
         allow create: if validPublicProjection(request.resource.data)
           && request.resource.data.status == 'booked'
           && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
@@ -760,7 +771,7 @@ service cloud.firestore {
           && (
             (isOwner(clubId) && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status == 'booked')
             ||
-            (isPlayer(clubId)
+            (isBookingPlayer(clubId, getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data)
               && scheduleIsPublic(clubId)
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status == 'pending'
               && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data) == request.auth.uid)
@@ -775,7 +786,7 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.startTime == request.resource.data.startTime
           && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.endTime == request.resource.data.endTime
           && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.courtId == request.resource.data.courtId;
-        allow delete: if (isOwner(clubId) || isPlayer(clubId))
+        allow delete: if (isOwner(clubId) || isBookingPlayer(clubId, getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data))
           && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId))
           && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data.status in ['rejected', 'expired']
           && (isOwner(clubId) || accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(bookingId)).data) == request.auth.uid);
@@ -807,7 +818,7 @@ service cloud.firestore {
           && request.resource.data.readAt == null
           && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId))
           && (
-            (isPlayer(clubId)
+            (isBookingPlayer(clubId, getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data)
               && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data) == request.auth.uid
               && request.resource.data.recipientUid == get(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid
               && (
@@ -887,7 +898,7 @@ service cloud.firestore {
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'booked'
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.createdByUid == request.auth.uid)
             ||
-            (isPlayer(clubId)
+            (isBookingPlayer(clubId, getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data)
               && scheduleIsPublic(clubId)
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data.status == 'pending'
               && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(request.resource.data.bookingId)).data) == request.auth.uid)
@@ -896,17 +907,18 @@ service cloud.firestore {
         allow delete: if resource.data.bookingId is string
           && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId))
           && getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data.status in ['cancelled', 'rejected', 'expired']
-          && (isOwner(clubId) || (isPlayer(clubId)
+          && (isOwner(clubId) || (isBookingPlayer(clubId, getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data)
             && accountUid(getAfter(/databases/$(database)/documents/clubs/$(clubId)/bookings/$(resource.data.bookingId)).data) == request.auth.uid));
       }
     }
 
-    // A code exposes only the club name and whether new membership is enabled; club settings remain private.
+    // Invite codes expose only the fields needed to complete an optional membership join.
     match /clubInvites/{clubId} {
       allow get: if signedIn();
       allow list: if false;
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['clubId', 'clubName', 'joinEnabled', 'createdAt'])
+        && request.resource.data.keys().hasAll(['clubId', 'clubName', 'joinEnabled', 'createdAt'])
         && request.resource.data.clubId == clubId
         && request.resource.data.clubName is string
         && request.resource.data.clubName.size() > 0
@@ -917,12 +929,73 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid == request.auth.uid
         && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.clubName == request.resource.data.clubName;
       allow update: if isOwner(clubId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clubName', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['clubId', 'clubName', 'joinEnabled', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['clubId', 'clubName', 'joinEnabled', 'createdAt', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'clubName', 'updatedAt', 'ownerUid', 'publicScheduleEnabled', 'defaultSessionPriceToman', 'courts'
+        ])
+        && request.resource.data.clubId == clubId
         && request.resource.data.clubName is string
         && request.resource.data.clubName.size() > 0
         && request.resource.data.clubName.size() <= 100
+        && request.resource.data.joinEnabled == resource.data.joinEnabled
+        && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time
         && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.clubName == request.resource.data.clubName;
+      allow delete: if false;
+    }
+
+    // Only this small, explicit projection is readable by signed-in users while public booking is enabled.
+    match /publicClubs/{clubId} {
+      allow get: if signedIn() && (isMember(clubId) || resource.data.publicScheduleEnabled == true);
+      allow list: if signedIn() && resource.data.publicScheduleEnabled == true;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'clubName', 'ownerUid', 'publicScheduleEnabled', 'defaultSessionPriceToman', 'courts', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'clubName', 'ownerUid', 'publicScheduleEnabled', 'defaultSessionPriceToman', 'courts', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.clubName is string
+        && request.resource.data.clubName.size() > 0
+        && request.resource.data.clubName.size() <= 100
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.publicScheduleEnabled is bool
+        && request.resource.data.defaultSessionPriceToman is int
+        && request.resource.data.defaultSessionPriceToman >= 0
+        && request.resource.data.courts is list
+        && request.resource.data.courts.size() <= 100
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/clubs/$(clubId))
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.clubName == request.resource.data.clubName
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.publicScheduleEnabled == request.resource.data.publicScheduleEnabled
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.defaultSessionPriceToman == request.resource.data.defaultSessionPriceToman
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.courts == request.resource.data.courts;
+      allow update: if isOwner(clubId)
+        && request.resource.data.keys().hasAll([
+          'clubName', 'ownerUid', 'publicScheduleEnabled', 'defaultSessionPriceToman', 'courts', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'clubName', 'ownerUid', 'publicScheduleEnabled', 'defaultSessionPriceToman', 'courts', 'updatedAt'
+        ])
+        && request.resource.data.clubName is string
+        && request.resource.data.clubName.size() > 0
+        && request.resource.data.clubName.size() <= 100
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.publicScheduleEnabled is bool
+        && request.resource.data.defaultSessionPriceToman is int
+        && request.resource.data.defaultSessionPriceToman >= 0
+        && request.resource.data.courts is list
+        && request.resource.data.courts.size() <= 100
+        && request.resource.data.updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/clubs/$(clubId))
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid == request.resource.data.ownerUid
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.clubName == request.resource.data.clubName
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.publicScheduleEnabled == request.resource.data.publicScheduleEnabled
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.defaultSessionPriceToman == request.resource.data.defaultSessionPriceToman
+        && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.courts == request.resource.data.courts;
       allow delete: if false;
     }
 
