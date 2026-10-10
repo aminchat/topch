@@ -150,6 +150,7 @@ service cloud.firestore {
       // Private club configuration is visible only after UID-based membership is active.
       allow get: if isMember(clubId);
       allow list: if false;
+      // Keep bootstrap checks one-way: the owner member and invite validate against this club in the same batch.
       allow create: if signedIn()
         && request.resource.data.createdByUid == request.auth.uid
         && request.resource.data.clubName is string
@@ -165,14 +166,7 @@ service cloud.firestore {
         && request.resource.data.archivedCourts is list
         && request.resource.data.archivedCourts.size() <= 200
         && request.resource.data.joinEnabled == true
-        && request.resource.data.createdAt == request.time
-        && existsAfter(memberPath(clubId, request.auth.uid))
-        && getAfter(memberPath(clubId, request.auth.uid)).data.role == 'owner'
-        && getAfter(memberPath(clubId, request.auth.uid)).data.active == true
-        && existsAfter(/databases/$(database)/documents/clubInvites/$(clubId))
-        && getAfter(/databases/$(database)/documents/clubInvites/$(clubId)).data.clubName == request.resource.data.clubName
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/clubMemberships/$(clubId))
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/clubMemberships/$(clubId)).data.role == 'owner';
+        && request.resource.data.createdAt == request.time;
       allow update: if isOwner(clubId)
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['clubName', 'defaultSessionPriceToman', 'publicScheduleEnabled', 'ownerPhone', 'courts', 'archivedCourts', 'updatedAt'])
@@ -193,6 +187,7 @@ service cloud.firestore {
       // Membership role and active status are server-validated by UID, never by email.
       match /members/{memberUid} {
         allow get, list: if isOwner(clubId) || (signedIn() && request.auth.uid == memberUid);
+        // Owner bootstrap checks the new club only; player joins still require their membership index and invite.
         allow create: if signedIn()
           && request.auth.uid == memberUid
           && request.resource.data.keys().hasOnly(['uid', 'email', 'role', 'active', 'joinedAt'])
@@ -201,14 +196,14 @@ service cloud.firestore {
           && request.resource.data.email.size() <= 254
           && request.resource.data.active == true
           && request.resource.data.joinedAt == request.time
-          && existsAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId))
-          && getAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId)).data.active == true
-          && getAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId)).data.role == request.resource.data.role
           && (
             (request.resource.data.role == 'owner'
               && existsAfter(/databases/$(database)/documents/clubs/$(clubId))
               && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.createdByUid == memberUid)
             || (request.resource.data.role == 'player'
+              && existsAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId))
+              && getAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId)).data.active == true
+              && getAfter(/databases/$(database)/documents/users/$(memberUid)/clubMemberships/$(clubId)).data.role == request.resource.data.role
               && exists(/databases/$(database)/documents/clubs/$(clubId))
               && existsAfter(/databases/$(database)/documents/clubInvites/$(clubId))
               && getAfter(/databases/$(database)/documents/clubInvites/$(clubId)).data.joinEnabled == true
