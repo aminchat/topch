@@ -97,6 +97,163 @@ exports.expireBookingHolds = onSchedule({
   if (expiredCount) logger.info(`Expired ${expiredCount} overdue booking hold(s).`);
 });
 
+exports.reserveRecurringBookings = onCall({
+  region: functionRegion,
+  timeoutSeconds: 120,
+  memory: '512MiB',
+}, async (request) => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'برای ثبت رزرو وارد شو.');
+  const uid = request.auth.uid;
+  const clubId = typeof request.data?.clubId === 'string' ? request.data.clubId : '';
+  const courtId = typeof request.data?.courtId === 'string' ? request.data.courtId : '';
+  const startTime = typeof request.data?.startTime === 'string' ? request.data.startTime : '';
+  const endTime = typeof request.data?.endTime === 'string' ? request.data.endTime : '';
+  const sport = request.data?.sport;
+  const bookedForName = typeof request.data?.bookedForName === 'string' ? request.data.bookedForName.trim() : '';
+  const note = typeof request.data?.note === 'string' ? request.data.note.trim() : '';
+  const priceToman = request.data?.priceToman;
+  const requestedAccountUid = request.data?.accountUid;
+  const dates = request.data?.dates;
+  const validSlots = new Set([
+    '00:00|01:30', '01:30|03:00', '03:00|04:30', '04:30|06:00',
+    '06:00|07:30', '07:30|09:00', '09:00|10:30', '10:30|12:00',
+    '12:00|13:30', '13:30|15:00', '15:00|16:30', '16:30|18:00',
+    '18:00|19:30', '19:30|21:00', '21:00|22:30', '22:30|24:00',
+  ]);
+  const isISODate = (value) => {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  };
+
+  if (!clubId || clubId.length > 150 || clubId.includes('/')) throw new HttpsError('invalid-argument', 'شناسهٔ باشگاه معتبر نیست.');
+  if (!courtId || courtId.length > 100 || !/^[A-Za-z0-9_-]+$/.test(courtId)) throw new HttpsError('invalid-argument', 'شناسهٔ زمین معتبر نیست.');
+  if (!validSlots.has(`${startTime}|${endTime}`)) throw new HttpsError('invalid-argument', 'بازهٔ سانس معتبر نیست.');
+  if (!['volleyball', 'futsal', 'other'].includes(sport)) throw new HttpsError('invalid-argument', 'نوع ورزش معتبر نیست.');
+  if (!bookedForName || bookedForName.length > 100) throw new HttpsError('invalid-argument', 'نام رزروکننده را تا ۱۰۰ نویسه وارد کن.');
+  if (!Number.isInteger(priceToman) || priceToman < 0 || priceToman > 1000000000) throw new HttpsError('invalid-argument', 'مبلغ رزرو معتبر نیست.');
+  if (note.length > 1000) throw new HttpsError('invalid-argument', 'یادداشت حداکثر ۱۰۰۰ نویسه باشد.');
+  if (requestedAccountUid !== undefined && requestedAccountUid !== null
+    && (typeof requestedAccountUid !== 'string' || !requestedAccountUid || requestedAccountUid.length > 150 || requestedAccountUid.includes('/'))) {
+    throw new HttpsError('invalid-argument', 'حساب بازیکن انتخاب‌شده معتبر نیست.');
+  }
+  if (!Array.isArray(dates) || dates.length === 0 || dates.length > 100
+    || dates.some((date) => !isISODate(date))
+    || new Set(dates).size !== dates.length
+    || dates.some((date, index) => index > 0 && date <= dates[index - 1])) {
+    throw new HttpsError('invalid-argument', 'تاریخ‌های تکرار معتبر نیستند.');
+  }
+
+  const accountUid = typeof requestedAccountUid === 'string' ? requestedAccountUid : uid;
+  const createdByEmail = typeof request.auth.token.email === 'string' ? request.auth.token.email.slice(0, 254) : '';
+  const clubRef = db.collection('clubs').doc(clubId);
+  const ownerMemberRef = clubRef.collection('members').doc(uid);
+  const accountMemberRef = clubRef.collection('members').doc(accountUid);
+
+  return db.runTransaction(async (transaction) => {
+    const [clubSnapshot, ownerMemberSnapshot, accountMemberSnapshot] = await Promise.all([
+      transaction.get(clubRef),
+      transaction.get(ownerMemberRef),
+      accountUid === uid ? Promise.resolve(null) : transaction.get(accountMemberRef),
+    ]);
+    if (!clubSnapshot.exists) throw new HttpsError('not-found', 'باشگاه پیدا نشد.');
+    const club = clubSnapshot.data();
+    const ownerMember = ownerMemberSnapshot.exists ? ownerMemberSnapshot.data() : null;
+    if (club.createdByUid !== uid || !ownerMember || ownerMember.uid !== uid || ownerMember.active !== true || ownerMember.role !== 'owner') {
+      throw new HttpsError('permission-denied', 'فقط صاحب فعال باشگاه می‌تواند رزرو تکرارشونده ثبت کند.');
+    }
+    if (accountUid !== uid) {
+      const accountMember = accountMemberSnapshot?.exists ? accountMemberSnapshot.data() : null;
+      if (!accountMember || accountMember.uid !== accountUid || accountMember.active !== true || accountMember.role !== 'player') {
+        throw new HttpsError('failed-precondition', 'حساب انتخاب‌شده عضو فعال بازیکن در این باشگاه نیست.');
+      }
+    }
+
+    const court = Array.isArray(club.courts)
+      ? club.courts.find((item) => item && item.id === courtId && typeof item.name === 'string')
+      : null;
+    if (!court || !court.name.trim() || court.name.length > 100) {
+      throw new HttpsError('failed-precondition', 'زمین انتخاب‌شده دیگر فعال نیست.');
+    }
+    if (priceToman !== Number(club.defaultSessionPriceToman ?? 0)) {
+      throw new HttpsError('failed-precondition', 'نرخ سانس با نرخ فعلی باشگاه هماهنگ نیست؛ صفحه را تازه کن و دوباره تلاش کن.');
+    }
+
+    const bookingsCollection = clubRef.collection('bookings');
+    const scheduleCollection = clubRef.collection('publicSchedule');
+    const sessionsCollection = clubRef.collection('sessions');
+    const locksCollection = clubRef.collection('slotLocks');
+    const slotRefs = dates.map((date) => locksCollection.doc(`${courtId}_${date}_${startTime}`));
+    const slotSnapshots = await Promise.all(slotRefs.map((ref) => transaction.get(ref)));
+    const conflictDates = [];
+    const createdDates = [];
+
+    dates.forEach((date, index) => {
+      if (slotSnapshots[index].exists) {
+        conflictDates.push(date);
+        return;
+      }
+      const lockId = `${courtId}_${date}_${startTime}`;
+      const bookingRef = bookingsCollection.doc();
+      const publicRef = scheduleCollection.doc(bookingRef.id);
+      const sessionRef = sessionsCollection.doc();
+      transaction.create(slotRefs[index], {
+        bookingId: bookingRef.id,
+        courtId,
+        date,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(bookingRef, {
+        date,
+        startTime,
+        endTime,
+        courtId,
+        courtName: court.name,
+        sport,
+        bookedForName,
+        priceToman,
+        note,
+        status: 'booked',
+        lockIds: [lockId],
+        accountUid,
+        accountBalanceAppliedToman: 0,
+        balanceHoldToman: 0,
+        paymentReportedAmountToman: 0,
+        paymentLedgerId: null,
+        sessionRecordId: sessionRef.id,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        createdByUid: uid,
+        createdByEmail,
+      });
+      transaction.create(publicRef, {
+        date,
+        startTime,
+        endTime,
+        courtId,
+        courtName: court.name,
+        status: 'booked',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(sessionRef, {
+        bookingId: bookingRef.id,
+        date,
+        priceToman,
+        status: 'scheduled',
+        note: `رزرو قطعی · ${court.name} · ${startTime} تا ${endTime}`,
+        createdAt: FieldValue.serverTimestamp(),
+        createdByUid: uid,
+        accountUid,
+        createdByEmail,
+      });
+      createdDates.push(date);
+    });
+
+    return { createdCount: createdDates.length, createdDates, conflictDates };
+  });
+});
+
 exports.applyBookingBalance = onCall({ region: functionRegion }, async (request) => {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'برای استفاده از ماندهٔ حساب وارد شو.');
   const bookingId = typeof request.data?.bookingId === 'string' ? request.data.bookingId : '';

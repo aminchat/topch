@@ -346,6 +346,9 @@ function getFriendlyError(error: unknown): string {
   if (code === 'storage/unauthorized' || code === 'storage/unauthenticated') {
     return 'Firebase Storage اجازه نداد؛ ورود، مسیر رسید و ایمیل‌ها در storage.rules را بررسی کن.';
   }
+  if (code.startsWith('functions/')) {
+    return (error as { message?: string })?.message ?? 'سرویس ثبت گروهی رزرو خطا داد.';
+  }
   if (code === 'permission-denied' || code === 'firestore/permission-denied') {
     return 'Firestore اجازه نداد؛ Rules منتشرشده در Firebase Console یا شرایط لازم برای همین عملیات را بررسی کن.';
   }
@@ -512,8 +515,9 @@ function buildRecurrenceReport(
     parts.push(`${formatNumber(conflictDates.length)} تداخل برای ${details.courtName} در ساعت ${formatTimeRange(details.startTime, details.endTime)} بود و ثبت نشد: ${dates}.`);
   }
   if (failedDates.length) {
-    const dates = failedDates.map(formatJalaliDate).join('، ');
-    parts.push(`ثبت در ${formatNumber(failedDates.length)} تاریخ (${dates}) با خطا روبه‌رو شد: ${fatalError}`);
+    const listedDates = failedDates.slice(0, 8).map(formatJalaliDate).join('، ');
+    const remainingDates = failedDates.length > 8 ? ` و ${formatNumber(failedDates.length - 8)} تاریخ دیگر` : '';
+    parts.push(`ثبت در ${formatNumber(failedDates.length)} تاریخ (${listedDates}${remainingDates}) با خطا روبه‌رو شد: ${fatalError}`);
   }
   const notAttempted = total - succeeded - conflictDates.length - failedDates.length;
   if (fatalError && notAttempted > 0) parts.push(`${formatNumber(notAttempted)} نوبت بعدی به‌دلیل توقف سری بررسی نشد.`);
@@ -1882,6 +1886,10 @@ function App() {
 
     const { repeatWeekly, repeatUntil, ...details } = input;
     const occurrenceDates = repeatWeekly ? getWeeklyDates(input.date, repeatUntil) : [input.date];
+    if (occurrenceDates.length > 100) {
+      setToast('در هر سری تکرارشونده حداکثر ۱۰۰ تاریخ را انتخاب کن.');
+      return;
+    }
     const overlapsOnDate = (booking: BookingRecord, date: string) =>
       isBookingActive(booking.status) &&
       booking.date === date &&
@@ -1957,7 +1965,7 @@ function App() {
 
       const firestore = db;
       const signedInUser = user;
-      if (!firestore || !signedInUser) return;
+      if (!firestore || !signedInUser || !firebaseApp) return;
 
       if (!repeatWeekly) {
         try {
@@ -1974,37 +1982,59 @@ function App() {
         return;
       }
 
+      const localConflictDates = occurrenceDates.filter((date) =>
+        bookings.some((booking) => overlapsOnDate(booking, date)),
+      );
+      const candidateDates = occurrenceDates.filter((date) => !localConflictDates.includes(date));
       let successCount = 0;
-      const conflictDates: string[] = [];
-      const failedDates: string[] = [];
+      let conflictDates = localConflictDates;
+      let failedDates: string[] = [];
       let fatalError = '';
-      const concurrency = 4;
-      for (let index = 0; index < occurrenceDates.length; index += concurrency) {
-        const chunk = occurrenceDates.slice(index, index + concurrency);
-        const results = await Promise.all(chunk.map(async (date) => {
-          if (bookings.some((booking) => overlapsOnDate(booking, date))) return { date, kind: 'conflict' as const };
-          try {
-            await reserveRemoteBooking(firestore, clubId, signedInUser.uid, { ...details, date }, signedInUser.email ?? '');
-            return { date, kind: 'saved' as const };
-          } catch (error) {
-            if ((error as { code?: string })?.code === 'booking-slot-conflict') return { date, kind: 'conflict' as const };
-            return { date, kind: 'error' as const, message: getFriendlyError(error) };
-          }
-        }));
-        for (const result of results) {
-          if (result.kind === 'saved') successCount += 1;
-          if (result.kind === 'conflict') conflictDates.push(result.date);
-          if (result.kind === 'error') {
-            failedDates.push(result.date);
-            fatalError ||= result.message;
-          }
+
+      if (candidateDates.length) {
+        try {
+          const functions = getFunctions(firebaseApp, 'europe-west1');
+          const reserveSeries = httpsCallable<{
+            clubId: string;
+            dates: string[];
+            courtId: string;
+            startTime: string;
+            endTime: string;
+            sport: SportType;
+            bookedForName: string;
+            priceToman: number;
+            note: string;
+            accountUid?: string;
+          }, {
+            createdCount: number;
+            createdDates: string[];
+            conflictDates: string[];
+          }>(functions, 'reserveRecurringBookings');
+          const { data } = await reserveSeries({
+            clubId,
+            dates: candidateDates,
+            courtId: details.courtId,
+            startTime: details.startTime,
+            endTime: details.endTime,
+            sport: details.sport,
+            bookedForName: details.bookedForName.trim(),
+            priceToman: details.priceToman,
+            note: details.note.trim(),
+            ...(details.accountUid ? { accountUid: details.accountUid } : {}),
+          });
+          successCount = data.createdCount;
+          const conflictSet = new Set([...localConflictDates, ...data.conflictDates]);
+          conflictDates = occurrenceDates.filter((date) => conflictSet.has(date));
+        } catch (error) {
+          fatalError = getFriendlyError(error);
+          failedDates = candidateDates;
         }
-        if (fatalError) break;
       }
+
       setModal(null);
       const report = buildRecurrenceReport(occurrenceDates.length, successCount, conflictDates, details, fatalError, failedDates);
       setScheduleReport(conflictDates.length || fatalError ? report : '');
-      setToast(`${formatNumber(successCount)} سانس تکرارشونده ثبت شد${conflictDates.length ? `؛ ${formatNumber(conflictDates.length)} تداخل گزارش شد` : ''}${fatalError ? '؛ ثبت سری به‌دلیل خطا متوقف شد' : ''}.`);
+      setToast(`${formatNumber(successCount)} سانس تکرارشونده ثبت شد${conflictDates.length ? `؛ ${formatNumber(conflictDates.length)} تداخل گزارش شد` : fatalError ? '' : '؛ بدون تداخل'}${fatalError ? '؛ ثبت سری به‌دلیل خطا متوقف شد' : ''}.`);
     } finally {
       setBookingSaving(false);
     }
