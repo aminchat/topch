@@ -1046,39 +1046,39 @@ function App() {
         role: 'owner',
         active: true,
       };
-      await runTransaction(db, async (transaction) => {
-        transaction.set(clubRef, {
-          clubName: cleanName,
-          defaultSessionPriceToman: 0,
-          publicScheduleEnabled: false,
-          ownerPhone: '',
-          courts: DEFAULT_SETTINGS.courts,
-          archivedCourts: [],
-          joinEnabled: true,
-          createdByUid: user.uid,
-          createdAt: joinedAt,
-        });
-        transaction.set(memberRef, {
-          uid: user.uid,
-          email: user.email ?? '',
-          role: 'owner',
-          active: true,
-          joinedAt,
-        });
-        transaction.set(indexRef, {
-          clubId: clubRef.id,
-          clubName: cleanName,
-          role: 'owner',
-          active: true,
-          joinedAt,
-        });
-        transaction.set(inviteRef, {
-          clubId: clubRef.id,
-          clubName: cleanName,
-          joinEnabled: true,
-          createdAt: joinedAt,
-        });
+      const batch = writeBatch(db);
+      batch.set(clubRef, {
+        clubName: cleanName,
+        defaultSessionPriceToman: 0,
+        publicScheduleEnabled: false,
+        ownerPhone: '',
+        courts: DEFAULT_SETTINGS.courts,
+        archivedCourts: [],
+        joinEnabled: true,
+        createdByUid: user.uid,
+        createdAt: joinedAt,
       });
+      batch.set(memberRef, {
+        uid: user.uid,
+        email: user.email ?? '',
+        role: 'owner',
+        active: true,
+        joinedAt,
+      });
+      batch.set(indexRef, {
+        clubId: clubRef.id,
+        clubName: cleanName,
+        role: 'owner',
+        active: true,
+        joinedAt,
+      });
+      batch.set(inviteRef, {
+        clubId: clubRef.id,
+        clubName: cleanName,
+        joinEnabled: true,
+        createdAt: joinedAt,
+      });
+      await batch.commit();
       setMemberships((current) => [membership, ...current.filter((item) => item.clubId !== membership.clubId)]);
       activateClub(clubRef.id);
     } catch (error) {
